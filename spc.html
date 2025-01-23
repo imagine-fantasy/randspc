@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spend Control Builder</title>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --border-color: #e5e7eb;
+            --text-color: #374151;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.5;
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .json-preview {
+            background: #f9fafb;
+            padding: 1rem;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+
+        .rule-section {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .condition-row,
+        .control-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div id="builder-form"></div>
+        </div>
+        <div class="card">
+            <pre id="json-output" class="json-preview"></pre>
+        </div>
+    </div>
+
+    <script>
+        // Core state management
+        const state = {
+            cardType: 'virtual',
+            rules: [],
+            errors: new Map()
+        };
+
+        // Constants
+        const TRANSACTION_TYPES = ['purchase', 'ecommerce', 'atm', 'transfer'];
+        const PERIOD_TYPES = ['hourly', 'daily', 'weekly', 'monthly', 'yearly', 'lifetime', 'cycle'];
+		// Add this CSS to your styles
+const tooltipStyles = `
+    .tooltip-trigger {
+        display: inline-flex;
+        align-items: center;
+        cursor: help;
+        margin-left: 4px;
+        font-size: 14px;
+    }
+
+    .tooltip-container {
+        position: relative;
+        display: inline-block;
+    }
+
+    .tooltip-content {
+        visibility: hidden;
+        background-color: #333;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        position: absolute;
+        z-index: 100;
+        width: 200px;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .tooltip-trigger:hover + .tooltip-content {
+        visibility: visible;
+        opacity: 1;
+    }
+
+    /* Add a little arrow at the bottom */
+    .tooltip-content::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: #333 transparent transparent transparent;
+    }
+`;
+
+
+
+const newStyles = `
+    .error-message {
+        color: #dc2626;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    .form-control.has-error {
+        border-color: #dc2626;
+    }
+
+    .tooltip {
+        position: relative;
+        display: inline-block;
+        margin-left: 0.5rem;
+        cursor: help;
+    }
+
+    .tooltip .tooltip-text {
+        visibility: hidden;
+        width: 200px;
+        background-color: #374151;
+        color: white;
+        text-align: center;
+        border-radius: 6px;
+        padding: 5px;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        margin-left: -100px;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .tooltip:hover .tooltip-text {
+        visibility: visible;
+        opacity: 1;
+    }
+
+    .delete-btn {
+        background: #ef4444;
+        color: white;
+        border: none;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.875rem;
+    }
+
+    .copy-btn {
+        background: #10b981;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-bottom: 1rem;
+    }
+`;
+
+const HELP_TEXTS = {
+    mcc: 'Merchant Category Codes: 4-digit codes that classify the business type',
+    transactionType: 'Types like: purchase, ecommerce, atm, transfer',
+    velocityLimit: 'Maximum spending allowed within the selected time period',
+    singleTransaction: 'Limits for individual transactions - min cannot exceed max'
+};
+
+// Add some styles for our plain English section
+const plainEnglishStyles = `
+    .plain-english-section {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: #f8fafc;
+        border-radius: 4px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .plain-english-text {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        white-space: pre-wrap;
+        margin: 0;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        color: #4b5563;
+    }
+`;
+
+document.querySelector('style').textContent += plainEnglishStyles;
+
+document.querySelector('style').textContent += tooltipStyles;
+
+        // Utility Functions
+        function formatMccValue(value) {
+            if (!value) return '';
+            if (value.includes('-')) {
+                const [start, end] = value.split('-').map(v => parseInt(v.trim()));
+                if (!isNaN(start) && !isNaN(end)) {
+                    return `${start}-${end}`;
+                }
+            }
+            return value.split(',')
+                .map(v => v.trim())
+                .filter(v => v)
+                .join(',');
+        }
+
+  // Update getDefaultRule to handle physical card rules correctly
+// function getDefaultRule() {
+//     return {
+//         ruleName: '',
+//         ruleValidityPeriod: state.cardType === 'virtual' ? {
+//             ruleEffectiveDate: new Date().toISOString(),
+//             ruleExpiryDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString()
+//         } : {},
+//         ruleStatus: 'active',
+//         ruleConditions: state.cardType === 'physical' ? undefined : undefined, // Start with undefined for physical cards
+//         ruleRestriction: {
+//             velocityControls: [{
+//                 cumulativeAmountLimit: 0,
+//                 cumulativePeriod: state.cardType === 'virtual' ? 'daily' : 'cycle'
+//             }],
+//             singleTransactionAmountControl: {
+//                 minimumAmount: 0,
+//                 maximumAmount: 1000
+//             },
+//             customControls: []
+//         }
+//     };
+// }
+
+// First, update getDefaultRule to initialize with an empty array
+// Update getDefaultRule to match our new velocity controls format
+function getDefaultRule() {
+    return {
+        ruleName: '',
+        ruleValidityPeriod: state.cardType === 'virtual' ? {
+            ruleEffectiveDate: new Date().toISOString(),
+            ruleExpiryDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString()
+        } : {},
+        ruleStatus: 'active',
+        ruleConditions: state.cardType === 'physical' ? undefined : undefined,
+        ruleRestriction: {
+            velocityControls: [{ // Initialize with one default control
+                cumulativeAmountLimit: 0,
+                cumulativeTransactionCountLimit: 0,
+                cumulativePeriod: state.cardType === 'virtual' ? 'daily' : 'cycle',
+                cumulativePeriodInterval: 1
+            }],
+            singleTransactionAmountControl: {
+                minimumAmount: 0,
+                maximumAmount: 1000
+            },
+            customControls: []
+        }
+    };
+}
+
+
+// New function to add velocity control
+function addVelocityControl(ruleIndex) {
+    const updatedRules = [...state.rules];
+    updatedRules[ruleIndex].ruleRestriction.velocityControls.push({
+        cumulativeAmountLimit: 0,
+        cumulativeTransactionCountLimit: 0,
+        cumulativePeriod: state.cardType === 'virtual' ? 'daily' : 'cycle',
+        cumulativePeriodInterval: 1
+    });
+    state.rules = updatedRules;
+    render();
+}
+
+
+
+// And we'll need this function to handle deletion
+function deleteVelocityControl(ruleIndex, controlIndex) {
+    const updatedRules = [...state.rules];
+    updatedRules[ruleIndex].ruleRestriction.velocityControls.splice(controlIndex, 1);
+    state.rules = updatedRules;
+    render();
+}
+
+
+        // Template Generators
+        function generateCardTypeSelector() {
+            return `
+                <div class="form-group">
+                    <label class="form-label">Card Type</label>
+                    <select class="form-control" id="card-type">
+                        <option value="virtual" ${state.cardType === 'virtual' ? 'selected' : ''}>
+                            Virtual (Declining Balance)
+                        </option>
+                        <option value="physical" ${state.cardType === 'physical' ? 'selected' : ''}>
+                            Physical
+                        </option>
+                    </select>
+                </div>
+            `;
+        }
+		
+		function generateRuleSection(rule, index) {
+    return `
+        <div class="rule-section" data-rule-index="${index}">
+            <div class="form-group">
+                <label class="form-label">Rule Name</label>
+                <input 
+                    type="text" 
+                    class="form-control"
+                    value="${rule.ruleName}"
+                    onchange="updateRule(${index}, 'ruleName', this.value)"
+                    placeholder="Enter rule name"
+                >
+            </div>
+            
+            ${state.cardType === 'physical' ? generateConditionsSection(rule, index) : ''}
+            ${generateVelocitySection(rule, index)}
+            ${generateTransactionLimitsSection(rule, index)}
+            ${generateCustomControlsSection(rule, index)}
+        </div>
+    `;
+}
+
+
+function generateVelocitySection(rule, index) {
+    const availablePeriods = state.cardType === 'virtual' ? VIRTUAL_PERIOD_TYPES : PHYSICAL_PERIOD_TYPES;
+    
+    return `
+        <div class="velocity-section">
+            <div class="section-header">
+                <label class="form-label">
+                    Velocity Controls
+                    ${addSmartTooltip('velocityLimit')}
+                </label>
+                <button class="btn btn-small" onclick="addVelocityControl(${index})">Add Period</button>
+            </div>
+            ${(rule.ruleRestriction.velocityControls || []).length === 0 ? 
+                `<div class="p-4 text-gray-500 text-center">
+                    No velocity controls yet. Click "Add Period" to set spending limits.
+                </div>` :
+                (rule.ruleRestriction.velocityControls || []).map((control, controlIndex) => `
+                    <div class="control-row" style="margin-bottom: 1rem;">
+                        <input 
+                            type="number"
+                            class="form-control"
+                            value="${control.cumulativeAmountLimit || 0}"
+                            placeholder="Amount Limit"
+                            onchange="updateVelocityControl(${index}, ${controlIndex}, 'cumulativeAmountLimit', this.value)"
+                        >
+                        <input 
+                            type="number"
+                            class="form-control"
+                            value="${control.cumulativeTransactionCountLimit || 0}"
+                            placeholder="Count Limit"
+                            onchange="updateVelocityControl(${index}, ${controlIndex}, 'cumulativeTransactionCountLimit', this.value)"
+                        >
+                        <select 
+                            class="form-control"
+                            onchange="updateVelocityControl(${index}, ${controlIndex}, 'cumulativePeriod', this.value)"
+                        >
+                            ${availablePeriods.map(period => `
+                                <option value="${period}" ${control.cumulativePeriod === period ? 'selected' : ''}>
+                                    ${period}
+                                </option>
+                            `).join('')}
+                        </select>
+                        <button class="delete-btn" onclick="deleteVelocityControl(${index}, ${controlIndex})">×</button>
+                    </div>
+                `).join('')
+            }
+        </div>
+    `;
+}
+
+function generateConditionsSection(rule, index) {
+    return `
+        <div class="conditions-section">
+            <div class="section-header">
+                <label class="form-label">Rule Conditions (Ledger)</label>
+                <button class="btn btn-small" onclick="addCondition(${index})">Add Condition</button>
+            </div>
+            ${(rule.ruleConditions || []).map((condition, condIndex) => `
+                <div class="condition-row" data-condition-index="${condIndex}">
+                    <select 
+                        class="form-control"
+                        onchange="updateCondition(${index}, ${condIndex}, 'controlType', this.value)"
+                    >
+                        <option value="${CONTROL_TYPES.MCC}" ${condition.controlType === CONTROL_TYPES.MCC ? 'selected' : ''}>MCC</option>
+                        <option value="${CONTROL_TYPES.TRANSACTION_TYPE}" ${condition.controlType === CONTROL_TYPES.TRANSACTION_TYPE ? 'selected' : ''}>Transaction Type</option>
+                        <option value="${CONTROL_TYPES.MERCHANT_DBA}" ${condition.controlType === CONTROL_TYPES.MERCHANT_DBA ? 'selected' : ''}>Merchant DBA</option>
+                        <option value="${CONTROL_TYPES.COUNTRY}" ${condition.controlType === CONTROL_TYPES.COUNTRY ? 'selected' : ''}>Country</option>
+                        <option value="${CONTROL_TYPES.CURRENCY}" ${condition.controlType === CONTROL_TYPES.CURRENCY ? 'selected' : ''}>Currency</option>
+                        <option value="${CONTROL_TYPES.TERMINAL_ID}" ${condition.controlType === CONTROL_TYPES.TERMINAL_ID ? 'selected' : ''}>Terminal ID</option>
+                        <option value="${CONTROL_TYPES.MCCG}" ${condition.controlType === CONTROL_TYPES.MCCG ? 'selected' : ''}>MCCG</option>
+                        <option value="${CONTROL_TYPES.DAY_OF_WEEK}" ${condition.controlType === CONTROL_TYPES.DAY_OF_WEEK ? 'selected' : ''}>Day of Week</option>
+                        <option value="${CONTROL_TYPES.TIME_PERIOD}" ${condition.controlType === CONTROL_TYPES.TIME_PERIOD ? 'selected' : ''}>Time Period</option>
+                    </select>
+                    ${generateControlValueInput(condition, index, condIndex)}
+                    <select 
+                        class="form-control"
+                        disabled
+                    >
+                        <option value="equal">Equal</option>
+                    </select>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function addCondition(ruleIndex) {
+    // Check if this is the first rule and it should be a card level rule
+    if (state.cardType === 'physical' && ruleIndex === 0) {
+        alert('The first rule for physical cards must be a card level rule (without conditions).');
+        return;
+    }
+    
+    const updatedRules = [...state.rules];
+    if (!updatedRules[ruleIndex].ruleConditions) {
+        updatedRules[ruleIndex].ruleConditions = [];
+    }
+    updatedRules[ruleIndex].ruleConditions.push({
+        controlType: 'mcc',
+        controlValue: '',
+        valueOperator: 'equal'
+    });
+    state.rules = updatedRules;
+    render();
+}
+
+
+function generateTransactionLimitsSection(rule, index) {
+    return `
+        <div class="transaction-limits-section form-group">
+            <label class="form-label">Single Transaction Limits</label>
+            <div class="control-row">
+                <div>
+                    <input
+                        type="number"
+                        class="form-control"
+                        placeholder="Minimum Amount"
+                        value="${rule.ruleRestriction.singleTransactionAmountControl.minimumAmount}"
+                        onchange="updateTransactionLimits(${index}, 'minimumAmount', this.value)"
+                    >
+                </div>
+                <div>
+                    <input
+                        type="number"
+                        class="form-control"
+                        placeholder="Maximum Amount"
+                        value="${rule.ruleRestriction.singleTransactionAmountControl.maximumAmount}"
+                        onchange="updateTransactionLimits(${index}, 'maximumAmount', this.value)"
+                    >
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function generateCustomControlsSection(rule, index) {
+    return `
+        <div class="custom-controls-section">
+            <div class="section-header">
+                <label class="form-label">Authorization Rules</label>
+                <button class="btn btn-small" onclick="addCustomControl(${index})">Add Rule</button>
+            </div>
+            ${(rule.ruleRestriction.customControls || []).map((control, controlIndex) => `
+                <div class="control-row" data-control-index="${controlIndex}">
+                    <select 
+                        class="form-control"
+                        onchange="updateCustomControl(${index}, ${controlIndex}, 'controlType', this.value)"
+                    >
+                        ${Object.entries(CONTROL_TYPES).map(([key, value]) => `
+                            <option value="${value}" ${control.controlType === value ? 'selected' : ''}>
+                                ${key}
+                            </option>
+                        `).join('')}
+                    </select>
+                    ${generateControlValueInput(control, index, controlIndex)}
+                    <select 
+                        class="form-control"
+                        onchange="updateCustomControl(${index}, ${controlIndex}, 'valueOperator', this.value)"
+                    >
+                        <option value="allow" ${control.valueOperator === 'allow' ? 'selected' : ''}>Allow</option>
+                        <option value="disallow" ${control.valueOperator === 'disallow' ? 'selected' : ''}>Disallow</option>
+                    </select>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function generateEnhancedVelocitySection(rule, index) {
+    return `
+        <div class="velocity-section">
+            ${Object.values(PERIOD_TYPES.TIME).map(period => `
+                <div class="period-control">
+                    <h4>${period.charAt(0).toUpperCase() + period.slice(1)} Limits</h4>
+                    <div class="control-row">
+                        <input 
+                            type="number" 
+                            placeholder="Amount Limit"
+                            value="${rule.ruleRestriction.velocityControls.find(v => v.cumulativePeriod === period)?.cumulativeAmountLimit || ''}"
+                            onchange="updateVelocityControl(${index}, '${period}', 'amount', this.value)"
+                        >
+                        <input 
+                            type="number" 
+                            placeholder="Count Limit"
+                            value="${rule.ruleRestriction.velocityControls.find(v => v.cumulativePeriod === period)?.cumulativeTransactionCountLimit || ''}"
+                            onchange="updateVelocityControl(${index}, '${period}', 'count', this.value)"
+                        >
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+const VIRTUAL_PERIOD_TYPES = ['hourly', 'daily', 'weekly', 'monthly', 'yearly', 'lifetime'];
+const PHYSICAL_PERIOD_TYPES = ['hourly', 'daily', 'weekly', 'monthly', 'yearly', 'cycle'];
+
+const CONTROL_TYPES = {
+    MCC: 'mcc',
+    TRANSACTION_TYPE: 'transactionType',
+    MERCHANT_DBA: 'merchantDba',
+    COUNTRY: 'country',
+    CURRENCY: 'currency',
+    TERMINAL_ID: 'terminalId',
+    MCCG: 'mccg',
+    DAY_OF_WEEK: 'dayOfWeek',
+    TIME_PERIOD: 'timePeriod'
+};
+
+const DAYS_OF_WEEK = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+
+
+// And for time period validation
+function validateTimeFormat(time) {
+    const timePattern = /^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/;
+    return timePattern.test(time) ? true : 'Time must be in format HH:MM:SS between 00:00:00 and 23:59:59';
+}
+
+function updateTransactionLimits(ruleIndex, field, value) {
+    const updatedRules = [...state.rules];
+    updatedRules[ruleIndex].ruleRestriction.singleTransactionAmountControl[field] = parseFloat(value);
+    state.rules = updatedRules;
+    render();
+}
+
+function addCustomControl(ruleIndex) {
+    const updatedRules = [...state.rules];
+    updatedRules[ruleIndex].ruleRestriction.customControls.push({
+        controlType: 'mcc',
+        controlValue: '',
+        valueOperator: 'allow'
+    });
+    state.rules = updatedRules;
+    render();
+}
+
+function updateCustomControl(ruleIndex, controlIndex, field, value) {
+    const updatedRules = [...state.rules];
+    updatedRules[ruleIndex].ruleRestriction.customControls[controlIndex][field] = value;
+    state.rules = updatedRules;
+    render();
+}
+
+// function updateVelocity(ruleIndex, field, value) {
+//     const updatedRules = [...state.rules];
+//     updatedRules[ruleIndex].ruleRestriction.velocityControls[0][field] = 
+//         field === 'cumulativeAmountLimit' ? parseFloat(value) : value;
+//     state.rules = updatedRules;
+//     render();
+// }
+
+function updateVelocityControl(ruleIndex, controlIndex, field, value) {
+    const updatedRules = [...state.rules];
+    if (field === 'cumulativeAmountLimit' || field === 'cumulativeTransactionCountLimit') {
+        value = parseFloat(value) || 0;  // Added fallback to 0
+    }
+    updatedRules[ruleIndex].ruleRestriction.velocityControls[controlIndex][field] = value;
+    state.rules = updatedRules;
+    render();
+}
+
+function deleteCondition(ruleIndex, conditionIndex) {
+    const updatedRules = [...state.rules];
+    updatedRules[ruleIndex].ruleConditions.splice(conditionIndex, 1);
+    state.rules = updatedRules;
+    render();
+}
+
+function deleteCustomControl(ruleIndex, controlIndex) {
+    const updatedRules = [...state.rules];
+    updatedRules[ruleIndex].ruleRestriction.customControls.splice(controlIndex, 1);
+    state.rules = updatedRules;
+    render();
+}
+
+function addCopyButton() {
+    return `
+        <button class="btn" onclick="copyJsonToClipboard()">
+            Copy JSON 📋
+        </button>
+    `;
+}
+
+function copyJsonToClipboard() {
+    const json = JSON.stringify({ spendControlRules: state.rules }, null, 2);
+    navigator.clipboard.writeText(json).then(() => {
+        alert('JSON copied to clipboard!');
+    });
+}
+
+function updateRule(index, field, value) {
+    const updatedRules = [...state.rules];
+    if (field.includes('.')) {
+        // Handle nested fields
+        const [parent, child] = field.split('.');
+        updatedRules[index][parent][child] = value;
+    } else {
+        updatedRules[index][field] = value;
+    }
+    state.rules = updatedRules;
+    render();
+}
+
+// Add these helper functions
+function addTooltip(text) {
+    return `
+        <div class="tooltip">
+            <span>ℹ️</span>
+            <span class="tooltip-text">${text}</span>
+        </div>
+    `;
+}
+
+function showError(error) {
+    return `<div class="error-message">${error}</div>`;
+}
+
+function generateControlValueInput(condition, ruleIndex, condIndex) {
+    switch(condition.controlType) {
+        case CONTROL_TYPES.DAY_OF_WEEK:
+            return `
+                <select 
+                    class="form-control"
+                    onchange="updateCondition(${ruleIndex}, ${condIndex}, 'controlValue', this.value)"
+                >
+                    ${DAYS_OF_WEEK.map(day => `
+                        <option value="${day}" ${condition.controlValue === day ? 'selected' : ''}>${day}</option>
+                    `).join('')}
+                </select>
+            `;
+        case CONTROL_TYPES.TIME_PERIOD:
+            return `
+                <input 
+                    type="time"
+                    step="1"
+                    class="form-control"
+                    value="${condition.controlValue}"
+                    onchange="updateCondition(${ruleIndex}, ${condIndex}, 'controlValue', this.value)"
+                    pattern="^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$"
+                    title="Time format: HH:MM:SS"
+                >
+            `;
+        case CONTROL_TYPES.TRANSACTION_TYPE:
+            return `
+                <select 
+                    class="form-control"
+                    onchange="updateCondition(${ruleIndex}, ${condIndex}, 'controlValue', this.value)"
+                >
+                    ${TRANSACTION_TYPES.map(type => `
+                        <option value="${type}" ${condition.controlValue === type ? 'selected' : ''}>${type}</option>
+                    `).join('')}
+                </select>
+            `;
+        default:
+            return `
+                <input 
+                    type="text"
+                    class="form-control"
+                    value="${condition.controlValue}"
+                    placeholder="${getPlaceholder(condition.controlType)}"
+                    onchange="updateCondition(${ruleIndex}, ${condIndex}, 'controlValue', this.value)"
+                >
+            `;
+    }
+}
+
+function getPlaceholder(controlType) {
+    switch(controlType) {
+        case CONTROL_TYPES.MCC:
+            return 'e.g., 3000,4000,5000-6000';
+        case CONTROL_TYPES.MERCHANT_DBA:
+            return 'Enter merchant name';
+        case CONTROL_TYPES.COUNTRY:
+            return 'Enter country code (e.g., US)';
+        case CONTROL_TYPES.CURRENCY:
+            return 'Enter currency code (e.g., USD)';
+        case CONTROL_TYPES.TERMINAL_ID:
+            return 'Enter terminal ID';
+        case CONTROL_TYPES.MCCG:
+            return 'Enter MCCG';
+        default:
+            return 'Enter value';
+    }
+}
+// Update the generateRuleSection to include delete button
+function generateRuleSection(rule, index) {
+    const errors = validateRule(rule);
+    
+    return `
+        <div class="rule-section" data-rule-index="${index}">
+            <div class="section-header">
+                <div class="form-group">
+                    <label class="form-label">
+                        Rule Name
+                        ${addTooltip('Give your rule a descriptive name')}
+                    </label>
+                    <input 
+                        type="text" 
+                        class="form-control ${errors.some(e => e.field === 'ruleName') ? 'has-error' : ''}"
+                        value="${rule.ruleName}"
+                        onchange="updateRule(${index}, 'ruleName', this.value)"
+                        placeholder="Enter rule name"
+                    >
+                    ${errors.filter(e => e.field === 'ruleName').map(e => showError(e.message)).join('')}
+                </div>
+                <button class="delete-btn" onclick="deleteRule(${index})">Delete Rule</button>
+            </div>
+            
+            ${state.cardType === 'physical' ? generateConditionsSection(rule, index) : ''}
+            ${generateVelocitySection(rule, index)}
+            ${generateTransactionLimitsSection(rule, index)}
+            ${generateCustomControlsSection(rule, index)}
+        </div>
+    `;
+}
+
+// Add delete functionality
+function deleteRule(index) {
+    const updatedRules = [...state.rules];
+    updatedRules.splice(index, 1);
+    state.rules = updatedRules;
+    render();
+}
+
+// Add copy to clipboard functionality
+document.getElementById('json-output').parentElement.insertAdjacentHTML('beforeend', `
+    <button class="copy-btn" onclick="copyJsonToClipboard()">
+        Copy JSON
+    </button>
+`);
+
+// Add this function to your existing code
+function validateRule(rule) {
+    const errors = [];
+    
+    // Validate rule name
+    if (!rule.ruleName.trim()) {
+        errors.push({
+            field: 'ruleName',
+            message: 'Rule name is required'
+        });
+    }
+
+    // Validate transaction limits
+    const { minimumAmount, maximumAmount } = rule.ruleRestriction.singleTransactionAmountControl;
+    if (minimumAmount >= maximumAmount) {
+        errors.push({
+            field: 'transactionLimits',
+            message: 'Minimum amount must be less than maximum amount'
+        });
+    }
+
+    // Validate MCC formats (only if we have conditions)
+    if (rule.ruleConditions) {
+        rule.ruleConditions.forEach((condition, index) => {
+            if (condition.controlType === 'mcc' && condition.controlValue) {
+                const mccPattern = /^(\d{4}(-\d{4})?)(,\d{4}(-\d{4})?)*$/;
+                if (!mccPattern.test(condition.controlValue)) {
+                    errors.push({
+                        field: `condition-${index}`,
+                        message: 'Invalid MCC format. Use 4-digit codes (e.g., 3000,4000 or 5000-6000)'
+                    });
+                }
+            }
+        });
+    }
+
+    return errors;
+}
+
+function validateMccInput(value) {
+    // Add this to your validation helpers
+    const mccValue = value.trim();
+    if (!mccValue) return { isValid: true, message: '' };
+    
+    const patterns = {
+        single: /^\d{4}$/,
+        range: /^\d{4}-\d{4}$/,
+        multiple: /^(\d{4})(,\d{4})*$/,
+        multipleWithRanges: /^(\d{4}(-\d{4})?)(,\d{4}(-\d{4})?)*$/
+    };
+
+    if (patterns.multipleWithRanges.test(mccValue)) {
+        return { isValid: true, message: '✅ Valid MCC format' };
+    }
+
+    let helpMessage = 'Try: 3000 or 3000-4000 or 3000,4000';
+    return { isValid: false, message: `🤔 ${helpMessage}` };
+}
+
+function generateCustomControlsSection(rule, index) {
+    return `
+        <div class="custom-controls-section">
+            <div class="section-header">
+                <label class="form-label">Authorization Rules</label>
+                <button class="btn btn-small" onclick="addCustomControl(${index})">Add Rule</button>
+            </div>
+            ${(rule.ruleRestriction.customControls || []).map((control, controlIndex) => `
+                <div class="control-row" data-control-index="${controlIndex}">
+                    <select 
+                        class="form-control"
+                        onchange="updateCustomControl(${index}, ${controlIndex}, 'controlType', this.value)"
+                    >
+                        <option value="mcc" ${control.controlType === 'mcc' ? 'selected' : ''}>MCC</option>
+                        <option value="transactionType" ${control.controlType === 'transactionType' ? 'selected' : ''}>Transaction Type</option>
+                    </select>
+                    <input 
+                        type="text"
+                        class="form-control"
+                        value="${control.controlValue}"
+                        placeholder="${control.controlType === 'mcc' ? 'e.g., 3000' : 'e.g., purchase'}"
+                        onchange="updateCustomControl(${index}, ${controlIndex}, 'controlValue', this.value)"
+                    >
+                    <select 
+                        class="form-control"
+                        onchange="updateCustomControl(${index}, ${controlIndex}, 'valueOperator', this.value)"
+                    >
+                        <option value="allow" ${control.valueOperator === 'allow' ? 'selected' : ''}>Allow</option>
+                        <option value="disallow" ${control.valueOperator === 'disallow' ? 'selected' : ''}>Disallow</option>
+                    </select>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+// Add this function to convert our rules into plain English
+function getPlainEnglishDescription(rule) {
+    let description = [];
+    
+    // Basic rule description
+    description.push(`Rule "${rule.ruleName || 'Unnamed Rule'}":`)
+
+    // Describe velocity controls
+    const velocityControl = rule.ruleRestriction?.velocityControls[0];
+    if (velocityControl) {
+        description.push(
+            `• Spending is limited to $${velocityControl.cumulativeAmountLimit.toLocaleString()} ` +
+            `per ${velocityControl.cumulativePeriod} period`
+        );
+    }
+
+    // Describe transaction limits
+    const { minimumAmount, maximumAmount } = rule.ruleRestriction.singleTransactionAmountControl;
+    description.push(
+        `• Individual transactions must be between ` +
+        `$${minimumAmount.toLocaleString()} and $${maximumAmount.toLocaleString()}`
+    );
+
+    // Describe conditions (for physical cards)
+    if (rule.ruleConditions?.length) {
+        description.push(`• These limits apply when:`);
+        rule.ruleConditions.forEach(condition => {
+            let conditionText = '';
+            if (condition.controlType === 'mcc') {
+                conditionText = `Merchant category is in [${condition.controlValue}]`;
+            } else if (condition.controlType === 'transactionType') {
+                conditionText = `Transaction type is ${condition.controlValue}`;
+            }
+            description.push(`  - ${conditionText}`);
+        });
+    }
+
+    // Describe custom controls
+    if (rule.ruleRestriction.customControls?.length) {
+        description.push(`• Special authorization rules:`);
+        rule.ruleRestriction.customControls.forEach(control => {
+            let controlText = '';
+            if (control.controlType === 'mcc') {
+                controlText = `${control.valueOperator === 'allow' ? 'Allow' : 'Block'} merchant category ${control.controlValue}`;
+            } else if (control.controlType === 'transactionType') {
+                controlText = `${control.valueOperator === 'allow' ? 'Allow' : 'Block'} ${control.controlValue} transactions`;
+            }
+            description.push(`  - ${controlText}`);
+        });
+    }
+
+    return description.join('\n');
+}
+
+function generateTransactionLimitsSection(rule, index) {
+    return `
+        <div class="transaction-limits-section form-group">
+            <label class="form-label">Single Transaction Limits</label>
+            <div class="control-row">
+                <input
+                    type="number"
+                    class="form-control"
+                    placeholder="Minimum Amount"
+                    value="${rule.ruleRestriction.singleTransactionAmountControl.minimumAmount}"
+                    onchange="updateTransactionLimits(${index}, 'minimumAmount', this.value)"
+                >
+                <input
+                    type="number"
+                    class="form-control"
+                    placeholder="Maximum Amount"
+                    value="${rule.ruleRestriction.singleTransactionAmountControl.maximumAmount}"
+                    onchange="updateTransactionLimits(${index}, 'maximumAmount', this.value)"
+                >
+            </div>
+        </div>
+    `;
+}
+
+function updateTransactionLimits(ruleIndex, field, value) {
+    const updatedRules = [...state.rules];
+    updatedRules[ruleIndex].ruleRestriction.singleTransactionAmountControl[field] = parseFloat(value);
+    state.rules = updatedRules;
+    render();
+}
+
+function addCustomControl(ruleIndex) {
+    const updatedRules = [...state.rules];
+    updatedRules[ruleIndex].ruleRestriction.customControls.push({
+        controlType: 'mcc',
+        controlValue: '',
+        valueOperator: 'allow'
+    });
+    state.rules = updatedRules;
+    render();
+}
+
+function updateCustomControl(ruleIndex, controlIndex, field, value) {
+    const updatedRules = [...state.rules];
+    updatedRules[ruleIndex].ruleRestriction.customControls[controlIndex][field] = value;
+    state.rules = updatedRules;
+    render();
+}
+
+function generateConditionsSection(rule, index) {
+    return `
+        <div class="conditions-section">
+            <div class="section-header">
+                <label class="form-label">
+                    Rule Conditions (Ledger)
+                    ${addSmartTooltip('transactionType')}
+                </label>
+                <button class="btn btn-small" onclick="addCondition(${index})">
+                    Add Condition
+                </button>
+            </div>
+            ${(rule.ruleConditions || []).map((condition, condIndex) => `
+                <div class="condition-row" data-condition-index="${condIndex}">
+                    <div class="form-group">
+                        <select 
+                            class="form-control"
+                            onchange="updateCondition(${index}, ${condIndex}, 'controlType', this.value)"
+                        >
+                            <option value="mcc" ${condition.controlType === 'mcc' ? 'selected' : ''}>
+                                MCC ${addSmartTooltip('mcc')}
+                            </option>
+                            <option value="transactionType" ${condition.controlType === 'transactionType' ? 'selected' : ''}>
+                                Transaction Type
+                            </option>
+                        </select>
+                    </div>
+                    <input 
+                        type="text"
+                        class="form-control"
+                        value="${condition.controlValue}"
+                        placeholder="${condition.controlType === 'mcc' ? 'e.g., 3000,4000,5000-6000' : 'e.g., purchase,ecommerce'}"
+                        onchange="updateCondition(${index}, ${condIndex}, 'controlValue', this.value)"
+                    >
+                    <select 
+                        class="form-control"
+                        disabled
+                    >
+                        <option value="equal">Equal</option>
+                    </select>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function generateVelocitySection(rule, index) {
+    return `
+        <div class="velocity-section">
+            <label class="form-label">
+                Velocity Controls
+                ${addSmartTooltip('velocityLimit')}
+            </label>
+            <div class="control-row">
+                <input 
+                    type="number"
+                    class="form-control"
+                    value="${rule.ruleRestriction.velocityControls[0].cumulativeAmountLimit}"
+                    placeholder="Amount Limit"
+                    onchange="updateVelocity(${index}, 'cumulativeAmountLimit', this.value)"
+                >
+                <select 
+                    class="form-control"
+                    onchange="updateVelocity(${index}, 'cumulativePeriod', this.value)"
+                >
+                    ${state.cardType === 'virtual' 
+                        ? '<option value="lifetime">Lifetime</option>'
+                        : PERIOD_TYPES.map(period => `
+                            <option value="${period}" ${rule.ruleRestriction.velocityControls[0].cumulativePeriod === period ? 'selected' : ''}>
+                                ${period}
+                            </option>
+                        `).join('')
+                    }
+                </select>
+            </div>
+        </div>
+    `;
+}
+
+// Then update our tooltip function
+function addSmartTooltip(field) {
+    return `
+        <div class="tooltip-container">
+            <span class="tooltip-trigger">ℹ️</span>
+            <div class="tooltip-content">
+                ${HELP_TEXTS[field] || 'Help text coming soon!'}
+            </div>
+        </div>
+    `;
+}
+
+function copyJsonToClipboard() {
+    const json = JSON.stringify({ spendControlRules: state.rules }, null, 2);
+    navigator.clipboard.writeText(json).then(() => {
+        alert('JSON copied to clipboard!');
+    });
+}
+
+function updateCondition(ruleIndex, conditionIndex, field, value) {
+    const updatedRules = [...state.rules];
+    updatedRules[ruleIndex].ruleConditions[conditionIndex][field] = 
+        field === 'controlValue' && updatedRules[ruleIndex].ruleConditions[conditionIndex].controlType === 'mcc'
+            ? formatMccValue(value)
+            : value;
+    state.rules = updatedRules;
+    render();
+}
+        // Event Handlers
+        function addRule() {
+    if (state.cardType === 'virtual' && state.rules.length > 0) return;
+    
+    if (state.cardType === 'physical') {
+        // Check if we're adding the first rule (card level rule)
+        if (state.rules.length === 0) {
+            // First rule must be a card level rule (no conditions)
+            const newRule = getDefaultRule();
+            state.rules = [...state.rules, newRule];
+        } else {
+            // Check if we already have a card level rule before allowing a rule with conditions
+            const hasCardLevelRule = state.rules.some(rule => !rule.ruleConditions || rule.ruleConditions.length === 0);
+            if (hasCardLevelRule) {
+                // Now we can add a rule with conditions
+                const newRule = getDefaultRule();
+                newRule.ruleConditions = []; // Initialize empty conditions array for physical card
+                state.rules = [...state.rules, newRule];
+            } else {
+                alert('You must add a card level rule (without conditions) before adding rules with conditions.');
+                return;
+            }
+        }
+    } else {
+        // Virtual card logic remains the same
+        state.rules = [...state.rules, getDefaultRule()];
+    }
+    render();
+}
+
+        // Main render function
+       // Update the render function to include both JSON and plain English
+function render() {
+    const builderForm = document.getElementById('builder-form');
+    const formContent = `
+        ${generateCardTypeSelector()}
+        ${state.rules.map((rule, index) => `
+            <div class="rule-section" data-rule-index="${index}">
+                ${generateRuleSection(rule, index)}
+                <div class="plain-english-section">
+                    <h4 class="form-label">In Plain English:</h4>
+                    <pre class="plain-english-text">
+${getPlainEnglishDescription(rule)}
+                    </pre>
+                </div>
+            </div>
+        `).join('')}
+        ${(state.cardType === 'virtual' ? state.rules.length === 0 : true) 
+            ? '<button class="btn" onclick="addRule()">Add Rule</button>' 
+            : ''
+        }
+    `;
+    
+    builderForm.innerHTML = formContent;
+    
+    // Update JSON preview
+    document.getElementById('json-output').textContent = 
+        JSON.stringify({ spendControlRules: state.rules }, null, 2);
+}
+
+
+
+
+
+        // Initialize the application
+        render();
+
+        // Event listeners
+        document.getElementById('builder-form').addEventListener('change', (e) => {
+            if (e.target.id === 'card-type') {
+                state.cardType = e.target.value;
+                state.rules = []; // Reset rules when changing card type
+                render();
+            }
+        });
+    </script>
+</body>
+</html>
