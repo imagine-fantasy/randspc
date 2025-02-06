@@ -1,0 +1,29 @@
+public class SpendControlRuleDeserializer extends JsonDeserializer<SpendControlRule> {
+    @Override
+    public SpendControlRule deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+        TreeNode node = p.getCodec().readTree(p);
+        ObjectMapper mapper = (ObjectMapper) p.getCodec();
+        
+        // Navigate to velocityControls array
+        TreeNode ruleRestriction = node.get("ruleRestriction");
+        if (ruleRestriction != null) {
+            TreeNode velocityControls = ruleRestriction.get("velocityControls");
+            if (velocityControls != null && velocityControls.isArray()) {
+                // Check each velocity control entry
+                for (int i = 0; i < velocityControls.size(); i++) {
+                    TreeNode control = velocityControls.get(i);
+                    TreeNode countLimit = control.get("cumulativeTransactionCountLimit");
+                    if (countLimit != null && countLimit.isValueNode()) {
+                        String rawValue = countLimit.toString();
+                        if (rawValue.contains(".")) {
+                            throw new JsonParseException(p, 
+                                "cumulativeTransactionCountLimit must be a whole number, found: " + rawValue);
+                        }
+                    }
+                }
+            }
+        }
+        
+        return mapper.treeToValue(node, SpendControlRule.class);
+    }
+}
