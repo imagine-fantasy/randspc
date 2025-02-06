@@ -1,0 +1,23 @@
+public class VelocityControlIntegerDeserializer extends JsonDeserializer<VelocityControl> {
+    @Override
+    public VelocityControl deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+        // Let Jackson do the heavy lifting of creating the object
+        JsonNode node = p.getCodec().readTree(p);
+        ObjectMapper mapper = (ObjectMapper) p.getCodec();
+        
+        // Check specifically for cumulativeCount if it exists
+        if (node.has("cumulativeCount")) {
+            JsonNode countNode = node.get("cumulativeCount");
+            if (!countNode.isNull() && countNode.isNumber()) {
+                String rawValue = countNode.asText();
+                if (rawValue.contains(".")) {
+                    throw new JsonParseException(p, 
+                        "cumulativeCount must be a whole number, found: " + rawValue);
+                }
+            }
+        }
+        
+        // Convert back to our object
+        return mapper.treeToValue(node, VelocityControl.class);
+    }
+}
