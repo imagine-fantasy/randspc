@@ -1,0 +1,18 @@
+Ah, now I understand the full picture much better! Let me craft that table again with this crucial insight about the standard OAS validation - it's like choosing between a standard-issue uniform that everyone has to wear (String) versus a custom-tailored suit (Deserializer) 🎯
+
+| Aspect | String (Standard OAS) | Integer + Deserializer |
+|--------|----------------------|----------------------|
+| **PROS** | | |
+| Standard Format | ✅ Uses built-in OAS validation | ✅ Customizable error messages |
+| Error Handling | ✅ Catches all violations | ✅ Can provide context-specific messages |
+| Implementation | ✅ No custom code needed | ✅ Type-safe from the start |
+| Reusability | ✅ Works for all similar fields | ✅ Can target specific validation needs |
+| **CONS** | | |
+| Error Messages | ❌ Generic "Count field failed" repeated | ❌ Stops at first error |
+| Flexibility | ❌ Can't customize without affecting other fields | ❌ Needs custom code maintenance |
+| Processing | ❌ Two-step validation (format + business) | ❌ More complex implementation |
+| Impact | ❌ Changes affect all format validations | ❌ Limited to specific fields |
+
+The key insight here is that while the String approach gives us standardization, it comes with those repetitive generic messages - like a form letter sent to everyone. The Deserializer gives us that custom touch but requires more maintenance - like having a personal assistant who needs training! 
+
+Want me to expand on any particular trade-offs? 🤔​​​​​​​​​​​​​​​​
