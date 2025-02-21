@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spend Control Simulator</title>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+            --border-color: #e5e7eb;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f3f4f6;
+            color: #374151;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .upload-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .simulator-section {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            height: calc(100vh - 200px);
+        }
+
+        .panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow-y: auto;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: #4b5563;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.625rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.875rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+
+        .btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.625rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .json-input {
+            min-height: 100px;
+            font-family: monospace;
+            font-size: 0.875rem;
+        }
+
+        .transaction-item {
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 0.75rem;
+            transition: transform 0.2s;
+        }
+
+        .transaction-item:hover {
+            transform: translateX(4px);
+        }
+
+        .approved { 
+            border-left: 4px solid var(--success-color);
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        .declined { 
+            border-left: 4px solid var(--error-color);
+            background: rgba(239, 68, 68, 0.05);
+        }
+
+        .velocity-counter {
+            background: #f9fafb;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary-color);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .panel-title {
+            font-size: 1.25rem;
+            color: #111827;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid #f3f4f6;
+        }
+
+        .scroll-container {
+            height: calc(100% - 50px);
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Upload Section -->
+        <div class="upload-section">
+            <div class="form-group">
+                <textarea 
+                    id="jsonConfig" 
+                    class="form-control json-input" 
+                    placeholder="Paste your JSON configuration here..."
+                ></textarea>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn" onclick="loadConfiguration()">Load Configuration</button>
+                <label class="btn" style="margin: 0;">
+                    Upload JSON
+                    <input type="file" id="configFile" accept=".json" style="display: none">
+                </label>
+            </div>
+        </div>
+
+        <!-- Three Panel Layout -->
+        <div class="simulator-section">
+            <!-- Transaction Creation -->
+            <div class="panel">
+                <h2 class="panel-title">Create Transaction</h2>
+                <div class="scroll-container">
+                    <div class="form-group">
+                        <label class="form-label">Amount ($)</label>
+                        <input type="number" id="txAmount" class="form-control" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Transaction Type</label>
+                        <select id="txType" class="form-control">
+                            <option value="purchase">Purchase</option>
+                            <option value="ecommerce">E-commerce</option>
+                            <option value="atm">ATM</option>
+                            <option value="transfer">Transfer</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">MCC</label>
+                        <input type="text" id="txMcc" class="form-control" placeholder="e.g., 5411">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Merchant ID</label>
+                        <input type="text" id="txMerchantId" class="form-control" placeholder="e.g., MERCH123">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Merchant Name</label>
+                        <input type="text" id="txMerchantName" class="form-control" placeholder="e.g., Local Grocery">
+                    </div>
+                    <button class="btn" onclick="submitTransaction()" style="width: 100%;">Submit Transaction</button>
+                </div>
+            </div>
+
+            <!-- Current State -->
+            <div class="panel">
+                <h2 class="panel-title">Current State</h2>
+                <div class="scroll-container">
+                    <div id="velocityLimits"></div>
+                    <div id="activeRules"></div>
+                </div>
+            </div>
+
+            <!-- Transaction History -->
+            <div class="panel">
+                <h2 class="panel-title">Transaction History</h2>
+                <div class="scroll-container" id="transactionHistory"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // [Previous JavaScript code remains the same]
+        
+        // Enhanced updateVelocityDisplay for better visualization
+        function updateVelocityDisplay() {
+            const velocityLimits = document.getElementById('velocityLimits');
+            if (!SimulatorState.config) {
+                velocityLimits.innerHTML = '<p>Load configuration to see velocity limits</p>';
+                return;
+            }
+
+            let html = '';
+            SimulatorState.config.spendControlRules.forEach((rule, index) => {
+                if (rule.ruleRestriction.velocityControls) {
+                    html += `<div class="rule-section">
+                        ${index === 0 ? '<h3>Card Level Controls</h3>' : `<h3>Rule: ${rule.ruleName || 'Unnamed Rule'}</h3>`}`;
+                    
+                    rule.ruleRestriction.velocityControls.forEach(control => {
+                        const used = calculatePeriodTotal(control.cumulativePeriod);
+                        const percentage = Math.min((used / control.cumulativeAmountLimit) * 100, 100);
+                        html += `
+                            <div class="velocity-counter">
+                                <div>
+                                    <strong>${formatPeriodName(control.cumulativePeriod)}</strong>
+                                    <div>$${used.toFixed(2)} / $${control.cumulativeAmountLimit}</div>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: ${percentage}%"></div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                }
+            });
+            velocityLimits.innerHTML = html;
+        }
+
+        function formatPeriodName(period) {
+            const names = {
+                hour: 'Hourly Limit',
+                daily: 'Daily Limit',
+                month: 'Monthly Limit',
+                lifetime: 'Lifetime Limit',
+                cycle: 'Billing Cycle Limit'
+            };
+            return names[period] || period;
+        }
+
+        // Enhanced transaction history display
+        function updateTransactionHistory(transaction, decision) {
+            const history = document.getElementById('transactionHistory');
+            const item = document.createElement('div');
+            item.className = `transaction-item ${decision.approved ? 'approved' : 'declined'}`;
+            item.innerHTML = `
+                <div style="display: flex; justify-content: space-between;">
+                    <strong>$${transaction.amount.toFixed(2)}</strong>
+                    <span>${decision.approved ? '✅ Approved' : '❌ Declined'}</span>
+                </div>
+                <div>${transaction.merchantName || 'Unknown Merchant'}</div>
+                <div style="color: #6b7280; font-size: 0.875rem;">
+                    ${transaction.mcc ? `MCC: ${transaction.mcc}` : ''} 
+                    ${transaction.merchantId ? ` | ID: ${transaction.merchantId}` : ''}
+                </div>
+                ${decision.reason ? `<div style="color: #ef4444; margin-top: 0.5rem;">${decision.reason}</div>` : ''}
+                <div style="color: #6b7280; font-size: 0.75rem; margin-top: 0.5rem;">
+                    ${new Date(transaction.timestamp).toLocaleString()}
+                </div>
+            `;
+            history.insertBefore(item, history.firstChild);
+        }
+
+        // Initialize displays
+        updateVelocityDisplay();
+    </script>
+</body>
+</html>
