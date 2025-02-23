@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spend Control Simulator</title>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+            --border-color: #e5e7eb;
+            --text-color: #374151;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f3f4f6;
+            color: var(--text-color);
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .upload-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .simulator-section {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            height: calc(100vh - 200px);
+        }
+
+        .panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow-y: auto;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.625rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.875rem;
+        }
+
+        .btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.625rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .velocity-counter {
+            background: #f9fafb;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary-color);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .rule-card {
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 6px;
+        }
+
+        .transaction-item {
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 0.75rem;
+        }
+
+        .approved {
+            border-left: 4px solid var(--success-color);
+        }
+
+        .declined {
+            border-left: 4px solid var(--error-color);
+        }
+
+        .transaction-history {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        /* Slider styles */
+        .slider-container {
+            margin: 1rem 0;
+        }
+
+        .slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: #e5e7eb;
+            outline: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+        }
+
+        .panel-title {
+            font-size: 1.25rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid #f3f4f6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Configuration Upload -->
+        <div class="upload-section">
+            <div class="form-group">
+                <label class="form-label">Load Configuration</label>
+                <textarea 
+                    id="configInput" 
+                    class="form-control" 
+                    rows="4" 
+                    placeholder="Paste your JSON configuration here..."
+                ></textarea>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn" onclick="handleConfigLoad()">Load Configuration</button>
+                <label class="btn" style="margin: 0;">
+                    Upload JSON
+                    <input 
+                        type="file" 
+                        id="configFile" 
+                        accept=".json" 
+                        style="display: none;"
+                        onchange="handleFileUpload(event)"
+                    >
+                </label>
+            </div>
+        </div>
+
+        <!-- Main Simulator Interface -->
+        <div class="simulator-section">
+            <!-- Transaction Creation -->
+            <div class="panel">
+                <h2 class="panel-title">Create Transaction</h2>
+                <div class="form-group">
+                    <label class="form-label">Amount ($)</label>
+                    <div class="slider-container">
+                        <input 
+                            type="range" 
+                            id="amountSlider" 
+                            class="slider" 
+                            min="0" 
+                            max="10000" 
+                            step="10" 
+                            value="100"
+                            oninput="updateAmountDisplay(this.value)"
+                        >
+                        <div id="amountDisplay">$100.00</div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Transaction Type</label>
+                    <select id="txType" class="form-control">
+                        <option value="purchase">Purchase</option>
+                        <option value="ecommerce">E-commerce</option>
+                        <option value="atm">ATM</option>
+                        <option value="transfer">Transfer</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">MCC</label>
+                    <input 
+                        type="text" 
+                        id="txMcc" 
+                        class="form-control" 
+                        placeholder="e.g., 5411"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Merchant Name</label>
+                    <input 
+                        type="text" 
+                        id="txMerchantName" 
+                        class="form-control" 
+                        placeholder="e.g., Local Grocery"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">MCCG</label>
+                    <input 
+                        type="text" 
+                        id="txMccg" 
+                        class="form-control" 
+                        placeholder="e.g., RETAIL"
+                    >
+                </div>
+
+                <button class="btn" onclick="submitTransaction()" style="width: 100%;">
+                    Submit Transaction
+                </button>
+            </div>
+
+            <!-- Current State -->
+            <div class="panel">
+                <h2 class="panel-title">Current State</h2>
+                <div id="velocityLimits"></div>
+                <div id="activeRules"></div>
+            </div>
+
+            <!-- Transaction History -->
+            <div class="panel">
+                <h2 class="panel-title">Transaction History</h2>
+                <div id="transactionHistory" class="transaction-history"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        
+                            // Core state and constants - Add this at the START of your script section
+                    const TRANSACTION_TYPES = {
+                        PURCHASE: 'purchase',
+                        ECOMMERCE: 'ecommerce',
+                        ATM: 'atm',
+                        TRANSFER: 'transfer'
+                    };
+
+                    const PERIOD_TYPES = {
+                        HOUR: 'hour',
+                        DAILY: 'daily',
+                        WEEK: 'week',
+                        MONTH: 'month',
+                        YEAR: 'year',
+                        LIFETIME: 'lifetime',
+                        CYCLE: 'cycle'
+                    };
+
+                    // Initialize our simulator state
+                    const SimulatorState = {
+                        config: null,
+                        transactions: [],
+                        velocityCounters: {},
+                        currentRules: {
+                            cardLevel: null,
+                            conditional: []
+                        }
+                    };
+
+
+        
+        function updateAmountDisplay(value) {
+            document.getElementById('amountDisplay').textContent = 
+                '$' + parseFloat(value).toFixed(2);
+        }
+
+        function handleConfigLoad() {
+            const configInput = document.getElementById('configInput');
+            const result = loadConfiguration(configInput.value);
+            
+            if (!result.success) {
+                alert('Error loading configuration: ' + result.error);
+                return;
+            }
+            
+            alert('Configuration loaded successfully!');
+        }
+
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                document.getElementById('configInput').value = text;
+                handleConfigLoad();
+            } catch (error) {
+                alert('Error reading file: ' + error.message);
+            }
+        }
+
+        function submitTransaction() {
+            if (!SimulatorState.config) {
+                alert('Please load a configuration first');
+                return;
+            }
+
+            const transaction = {
+                amount: parseFloat(document.getElementById('amountSlider').value),
+                type: document.getElementById('txType').value,
+                mcc: document.getElementById('txMcc').value,
+                merchantName: document.getElementById('txMerchantName').value,
+                mccg: document.getElementById('txMccg').value,
+                timestamp: new Date().toISOString()
+            };
+
+            const result = processTransaction(transaction);
+            
+            // Update transaction history
+            const history = document.getElementById('transactionHistory');
+            const item = document.createElement('div');
+            item.className = `transaction-item ${result.approved ? 'approved' : 'declined'}`;
+            item.innerHTML = `
+                <div style="display: flex; justify-content: space-between;">
+                    <strong>$${transaction.amount.toFixed(2)}</strong>
+                    <span>${result.approved ? '✅ Approved' : '❌ Declined'}</span>
+                </div>
+                <div>${transaction.merchantName || 'Unknown Merchant'}</div>
+                <div style="color: #6b7280; font-size: 0.875rem;">
+                    MCC: ${transaction.mcc || 'N/A'} | Type: ${transaction.type}
+                </div>
+                ${result.message ? `
+                    <div style="color: #ef4444; margin-top: 0.5rem;">
+                        ${result.message}
+                    </div>
+                ` : ''}
+            `;
+            
+            history.insertBefore(item, history.firstChild);
+        }
+
+
+// UI Helper Functions
+function updateAmountDisplay(value) {
+    document.getElementById('amountDisplay').textContent = 
+        '$' + parseFloat(value).toFixed(2);
+}
+
+function updateCurrentStateDisplay() {
+    const velocityLimits = document.getElementById('velocityLimits');
+    const activeRules = document.getElementById('activeRules');
+    
+    if (!SimulatorState.config) {
+        velocityLimits.innerHTML = '<p>No configuration loaded</p>';
+        activeRules.innerHTML = '';
+        return;
+    }
+    
+    // Update velocity limits display
+    velocityLimits.innerHTML = Object.entries(SimulatorState.velocityCounters)
+        .map(([period, data]) => `
+            <div class="velocity-counter">
+                <h3>${formatPeriodName(period)}</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${(data.amount / data.limit) * 100}%"></div>
+                </div>
+                <p>$${data.amount.toFixed(2)} / $${data.limit.toFixed(2)}</p>
+            </div>
+        `).join('');
+    
+    // Update active rules display
+    activeRules.innerHTML = `
+        <h3>Card Level Rule</h3>
+        ${formatRuleDisplay(SimulatorState.currentRules.cardLevel)}
+        
+        <h3>Conditional Rules</h3>
+        ${SimulatorState.currentRules.conditional
+            .map(rule => formatRuleDisplay(rule))
+            .join('')}
+    `;
+}
+
+function formatPeriodName(period) {
+    return period.charAt(0).toUpperCase() + period.slice(1) + ' Limit';
+}
+
+function formatRuleDisplay(rule) {
+    if (!rule) return '<p>No rule configured</p>';
+    
+    return `
+        <div class="rule-card">
+            <h4>${rule.ruleName || 'Unnamed Rule'}</h4>
+            ${rule.ruleConditions ? `
+                <div class="conditions">
+                    <h5>Conditions:</h5>
+                    ${rule.ruleConditions.map(c => 
+                        `<p>${c.controlType}: ${c.controlValue}</p>`
+                    ).join('')}
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+function handleConfigLoad() {
+    const configInput = document.getElementById('configInput');
+    const result = loadConfiguration(configInput.value);
+    
+    if (!result.success) {
+        alert('Error loading configuration: ' + result.error);
+        return;
+    }
+    
+    alert('Configuration loaded successfully!');
+    updateCurrentStateDisplay();
+}
+
+async function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+        const text = await file.text();
+        document.getElementById('configInput').value = text;
+        handleConfigLoad();
+    } catch (error) {
+        alert('Error reading file: ' + error.message);
+    }
+}
+
+function submitTransaction() {
+    if (!SimulatorState.config) {
+        alert('Please load a configuration first');
+        return;
+    }
+
+    const transaction = {
+        amount: parseFloat(document.getElementById('amountSlider').value),
+        type: document.getElementById('txType').value,
+        mcc: document.getElementById('txMcc').value,
+        merchantName: document.getElementById('txMerchantName').value,
+        mccg: document.getElementById('txMccg').value,
+        timestamp: new Date().toISOString()
+    };
+
+    const result = processTransaction(transaction);
+    
+    // Update transaction history
+    const history = document.getElementById('transactionHistory');
+    const item = document.createElement('div');
+    item.className = `transaction-item ${result.approved ? 'approved' : 'declined'}`;
+    item.innerHTML = `
+        <div style="display: flex; justify-content: space-between;">
+            <strong>$${transaction.amount.toFixed(2)}</strong>
+            <span>${result.approved ? '✅ Approved' : '❌ Declined'}</span>
+        </div>
+        <div>${transaction.merchantName || 'Unknown Merchant'}</div>
+        <div style="color: #6b7280; font-size: 0.875rem;">
+            MCC: ${transaction.mcc || 'N/A'} | Type: ${transaction.type}
+        </div>
+        ${result.message ? `
+            <div style="color: #ef4444; margin-top: 0.5rem;">
+                ${result.message}
+            </div>
+        ` : ''}
+    `;
+    
+    history.insertBefore(item, history.firstChild);
+    updateCurrentStateDisplay();
+}
+
+
+// Configuration Management
+function loadConfiguration(jsonString) {
+    try {
+        const config = JSON.parse(jsonString);
+        
+        // Basic validation
+        if (!config.spendControlRules || !Array.isArray(config.spendControlRules)) {
+            return { success: false, error: 'Invalid configuration format' };
+        }
+
+        SimulatorState.config = config;
+        SimulatorState.currentRules.cardLevel = config.spendControlRules[0];
+        SimulatorState.currentRules.conditional = config.spendControlRules.slice(1);
+        
+        // Reset state
+        SimulatorState.transactions = [];
+        SimulatorState.velocityCounters = initializeVelocityCounters(config);
+        
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+}
+
+// Velocity Counter Initialization
+function initializeVelocityCounters(config) {
+    const counters = {};
+    
+    config.spendControlRules.forEach(rule => {
+        if (rule.ruleRestriction.velocityControls) {
+            rule.ruleRestriction.velocityControls.forEach(control => {
+                const period = control.cumulativePeriod;
+                if (!counters[period]) {
+                    counters[period] = {
+                        amount: 0,
+                        limit: control.cumulativeAmountLimit,
+                        transactions: 0,
+                        transactionLimit: control.cumulativeTransactionCountLimit
+                    };
+                }
+            });
+        }
+    });
+    
+    return counters;
+}
+
+// Transaction Processing
+function processTransaction(transaction) {
+    if (!SimulatorState.config) {
+        return { approved: false, message: 'No configuration loaded' };
+    }
+
+    // Check card-level rule first
+    const cardLevelResult = evaluateRule(SimulatorState.currentRules.cardLevel, transaction);
+    if (!cardLevelResult.approved) {
+        return cardLevelResult;
+    }
+
+    // Check conditional rules
+    for (const rule of SimulatorState.currentRules.conditional) {
+        if (matchesConditions(rule, transaction)) {
+            const result = evaluateRule(rule, transaction);
+            if (!result.approved) {
+                return result;
+            }
+        }
+    }
+
+    // If we get here, transaction is approved
+    updateVelocityCounters(transaction);
+    return { approved: true };
+}
+
+// Rule Evaluation
+function evaluateRule(rule, transaction) {
+    // First, check custom controls - these are our specific allow/disallow rules
+    if (rule.ruleRestriction.customControls) {
+        for (const control of rule.ruleRestriction.customControls) {
+            switch (control.controlType) {
+                case 'mcc':
+                    const mccMatch = control.controlValue.split(',')
+                        .some(mcc => mcc.trim() === transaction.mcc);
+                    
+                    if ((control.valueOperator === 'allow' && !mccMatch) ||
+                        (control.valueOperator === 'disallow' && mccMatch)) {
+                        return {
+                            approved: false,
+                            message: `Transaction MCC ${transaction.mcc || 'N/A'} ${
+                                control.valueOperator === 'allow' ? 
+                                'not in allowed MCCs' : 'is disallowed'
+                            } (${control.controlValue})`
+                        };
+                    }
+                    break;
+
+                case 'transactionType':
+                    const typeMatch = control.controlValue.split(',')
+                        .some(type => type.trim() === transaction.type);
+                    
+                    if ((control.valueOperator === 'allow' && !typeMatch) ||
+                        (control.valueOperator === 'disallow' && typeMatch)) {
+                        return {
+                            approved: false,
+                            message: `Transaction type ${transaction.type} ${
+                                control.valueOperator === 'allow' ? 
+                                'not in allowed types' : 'is disallowed'
+                            }`
+                        };
+                    }
+                    break;
+
+                case 'merchantDba':
+                    const merchantMatch = transaction.merchantName && 
+                        transaction.merchantName.toLowerCase().includes(
+                            control.controlValue.toLowerCase()
+                        );
+                    
+                    if ((control.valueOperator === 'allow' && !merchantMatch) ||
+                        (control.valueOperator === 'disallow' && merchantMatch)) {
+                        return {
+                            approved: false,
+                            message: `Merchant ${transaction.merchantName || 'N/A'} ${
+                                control.valueOperator === 'allow' ? 
+                                'not in allowed merchants' : 'is disallowed'
+                            }`
+                        };
+                    }
+                    break;
+
+                case 'mccg':
+                    const mccgMatch = control.controlValue.split(',')
+                        .some(group => group.trim() === transaction.mccg);
+                    
+                    if ((control.valueOperator === 'allow' && !mccgMatch) ||
+                        (control.valueOperator === 'disallow' && mccgMatch)) {
+                        return {
+                            approved: false,
+                            message: `Transaction MCCG ${transaction.mccg || 'N/A'} ${
+                                control.valueOperator === 'allow' ? 
+                                'not in allowed groups' : 'is disallowed'
+                            }`
+                        };
+                    }
+                    break;
+            }
+        }
+    }
+
+    // Check single transaction amount limits
+    if (rule.ruleRestriction.singleTransactionAmountControl) {
+        const limits = rule.ruleRestriction.singleTransactionAmountControl;
+        if (transaction.amount < limits.minimumAmount) {
+            return {
+                approved: false,
+                message: `Amount below minimum allowed ($${limits.minimumAmount})`
+            };
+        }
+        if (transaction.amount > limits.maximumAmount) {
+            return {
+                approved: false,
+                message: `Amount exceeds maximum allowed ($${limits.maximumAmount})`
+            };
+        }
+    }
+
+    // Check velocity controls
+    if (rule.ruleRestriction.velocityControls) {
+        for (const control of rule.ruleRestriction.velocityControls) {
+            const period = control.cumulativePeriod;
+            const counter = SimulatorState.velocityCounters[period];
+            
+            if (counter.amount + transaction.amount > control.cumulativeAmountLimit) {
+                return {
+                    approved: false,
+                    message: `Exceeds ${period} limit of $${control.cumulativeAmountLimit}`
+                };
+            }
+
+            if (control.cumulativeTransactionCountLimit > 0 && 
+                counter.transactions + 1 > control.cumulativeTransactionCountLimit) {
+                return {
+                    approved: false,
+                    message: `Exceeds ${period} transaction count limit of ${control.cumulativeTransactionCountLimit}`
+                };
+            }
+        }
+    }
+
+    return { approved: true };
+}
+
+// Condition Matching
+function matchesConditions(rule, transaction) {
+    if (!rule.ruleConditions) return true;
+
+    return rule.ruleConditions.every(condition => {
+        switch (condition.controlType) {
+            case 'mcc':
+                return matchMcc(condition.controlValue, transaction.mcc);
+            case 'merchantDba':
+                return matchMerchantName(condition.controlValue, transaction.merchantName);
+            case 'mccg':
+                return matchMccg(condition.controlValue, transaction.mccg);
+            default:
+                return true;
+        }
+    });
+}
+
+// Helper Functions
+function matchMcc(controlValue, transactionMcc) {
+    if (!controlValue || !transactionMcc) return true;
+    return controlValue.split(',').some(mcc => mcc.trim() === transactionMcc);
+}
+
+function matchMerchantName(controlValue, merchantName) {
+    if (!controlValue || !merchantName) return true;
+    return merchantName.toLowerCase().includes(controlValue.toLowerCase());
+}
+
+function matchMccg(controlValue, mccg) {
+    if (!controlValue || !mccg) return true;
+    return controlValue.split(',').some(group => group.trim() === mccg);
+}
+
+function updateVelocityCounters(transaction) {
+    Object.values(SimulatorState.velocityCounters).forEach(counter => {
+        counter.amount += transaction.amount;
+        counter.transactions += 1;
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateCurrentStateDisplay();
+});
+
+        // Initialize displays
+        updateCurrentStateDisplay();
+    </script>
+</body>
+</html>
