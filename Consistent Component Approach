@@ -80,3 +80,10 @@
     }
   ]
 }
+
+
+Key Advantages:
+
+Same validation logic for base and scenarios
+Natural "when/then" scenario structure
+Reuses existing component patterns
