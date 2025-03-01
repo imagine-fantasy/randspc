@@ -1,0 +1,86 @@
+{
+  "spendControlRules": [
+    {
+      "ruleName": "Card Spending Configuration",
+      "ruleStatus": "active",
+      "ruleValidityPeriod": {
+        "ruleEffectiveDate": "2025-02-01T08:47:58.518Z",
+        "ruleExpiryDate": "2026-02-01T08:47:58.518Z"
+      },
+      "ruleRestriction": {
+        "velocityControls": [
+          {
+            "cumulativeAmountLimit": 10000,
+            "cumulativePeriod": "lifetime"
+          },
+          {
+            "cumulativeAmountLimit": 500,
+            "cumulativePeriod": "daily"
+          }
+        ],
+        "customControls": [
+          {
+            "controlType": "mccg",
+            "controlValue": "RETAIL,RESTAURANT",
+            "valueOperator": "allow"
+          }
+        ]
+      },
+      "specialSituations": [
+        {
+          "name": "Weekend Dining",
+          "when": [
+            {
+              "type": "dayOfWeek",
+              "is": "SATURDAY,SUNDAY"
+            },
+            {
+              "type": "merchantCategory",
+              "is": "RESTAURANT"
+            }
+          ],
+          "then": {
+            "velocityControls": [
+              {
+                "cumulativeAmountLimit": 750,
+                "cumulativePeriod": "daily"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Business Travel",
+          "when": [
+            {
+              "type": "merchantCategory",
+              "is": "TRAVEL"
+            }
+          ],
+          "then": {
+            "velocityControls": [
+              {
+                "cumulativeAmountLimit": 1000,
+                "cumulativePeriod": "daily"
+              }
+            ],
+            "geographicControls": [
+              {
+                "type": "country",
+                "allow": "USA,CAN,MEX"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+
+
+Key Advantages:
+
+Minimal changes to existing implementation
+Adds intuitive scenario handling
+Preserves all current fields exactly
+Lowest migration effort
+Maintains backward compatibility
