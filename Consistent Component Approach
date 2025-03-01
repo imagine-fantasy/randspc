@@ -1,0 +1,82 @@
+{
+  "spendControlRules": [
+    {
+      "ruleName": "Card Spending Configuration",
+      "ruleStatus": "active",
+      "ruleValidityPeriod": {
+        "ruleEffectiveDate": "2025-02-01T08:47:58.518Z",
+        "ruleExpiryDate": "2026-02-01T08:47:58.518Z"
+      },
+      "ruleRestriction": {
+        "velocityControls": [
+          {
+            "cumulativeAmountLimit": 10000,
+            "cumulativePeriod": "lifetime"
+          },
+          {
+            "cumulativeAmountLimit": 500,
+            "cumulativePeriod": "daily"
+          }
+        ],
+        "customControls": [
+          {
+            "controlType": "mccg",
+            "controlValue": "RETAIL,RESTAURANT",
+            "valueOperator": "allow"
+          }
+        ]
+      },
+      "scenarios": [
+        {
+          "name": "Weekend Dining",
+          "when": [
+            {
+              "controlType": "dayOfWeek",
+              "controlValue": "SATURDAY,SUNDAY",
+              "valueOperator": "equal"
+            },
+            {
+              "controlType": "mccg",
+              "controlValue": "RESTAURANT",
+              "valueOperator": "equal"
+            }
+          ],
+          "then": {
+            "velocityControls": [
+              {
+                "cumulativeAmountLimit": 750,
+                "cumulativePeriod": "daily"
+              }
+            ],
+            "customControls": []
+          }
+        },
+        {
+          "name": "Business Travel",
+          "when": [
+            {
+              "controlType": "mccg",
+              "controlValue": "TRAVEL",
+              "valueOperator": "equal"
+            }
+          ],
+          "then": {
+            "velocityControls": [
+              {
+                "cumulativeAmountLimit": 1000,
+                "cumulativePeriod": "daily"
+              }
+            ],
+            "customControls": [
+              {
+                "controlType": "country",
+                "controlValue": "USA,CAN,MEX",
+                "valueOperator": "allow"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
