@@ -1,0 +1,37 @@
+{
+  "card": {
+    "type": "physical",
+    "baseRules": {
+      "allowedSpending": {
+        "lifetime": 10000,
+        "daily": 500
+      },
+      "allowedMerchants": ["RETAIL", "RESTAURANT"],
+      "blockedMerchants": ["GAMBLING", "ADULT"]
+    },
+    "scenarios": [
+      {
+        "name": "Weekend Dining",
+        "when": {
+          "dayOfWeek": ["SATURDAY", "SUNDAY"],
+          "merchantCategory": "RESTAURANT"
+        },
+        "then": {
+          "allowedSpending": {
+            "perTransaction": { "max": 150 }
+          }
+        }
+      }
+    ]
+  }
+}
+
+Key Advantages:
+
+Intuitive business-focused terminology
+Clear separation between base case and exceptions
+Natural language structure that mirrors human thinking
+Processor-agnostic design
+Closest to Stripe's approach
+
+
