@@ -1,0 +1,177 @@
+openapi: 3.0.0
+info:
+  title: Spend Control API
+  version: '1.0.0'
+  description: API for managing card spending controls with hierarchical rule structure
+
+paths:
+  /cards/{cardId}/spend-controls:
+    get:
+      summary: Get spend controls for a card
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpendControlResponse'
+    put:
+      summary: Update spend controls for a card
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpendControlRequest'
+      responses:
+        '200':
+          description: Successfully updated
+        '400':
+          description: Validation error
+
+components:
+  schemas:
+    SpendControlRequest:
+      type: object
+      properties:
+        spendControlRules:
+          type: array
+          maxItems: 1  # For now, only supporting one rule
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/SpendControlRule'
+      required:
+        - spendControlRules
+
+    SpendControlResponse:
+      type: object
+      properties:
+        spendControlRules:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpendControlRule'
+
+    SpendControlRule:
+      type: object
+      properties:
+        ruleName:
+          type: string
+          description: Descriptive name for the rule
+        effectiveDate:
+          type: string
+          format: date-time
+          description: When this rule becomes active
+        expiryDate:
+          type: string
+          format: date-time
+          description: When this rule ceases to be active
+        velocityControls:
+          type: array
+          items:
+            $ref: '#/components/schemas/VelocityControl'
+        authorizationControls:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthorizationControl'
+        singleTransactionAmountLimit:
+          $ref: '#/components/schemas/SingleTransactionAmountLimit'
+        conditionalRules:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConditionalRule'
+
+    VelocityControl:
+      type: object
+      properties:
+        cumulativeAmountLimit:
+          type: number
+          format: double
+          description: Maximum amount allowed in this period
+        cumulativePeriod:
+          type: string
+          enum: [HOUR, DAILY, WEEK, MONTH, YEAR, LIFETIME, CYCLE]
+          description: Time period for this limit
+        cumulativeTransactionCountLimit:
+          type: integer
+          description: Maximum number of transactions allowed in this period
+      required:
+        - cumulativePeriod
+
+    AuthorizationControl:
+      type: object
+      properties:
+        controlType:
+          type: string
+          enum: [MCC, MCCG, COUNTRY, CURRENCY, MERCHANT_DBA, TERMINAL_ID, DAY_OF_WEEK, TIME_OF_DAY]
+          description: Type of control being applied
+        controlValue:
+          type: string
+          description: Value to match against (may be a single value or comma-separated list)
+        valueOperator:
+          type: string
+          enum: [ALLOW, DISALLOW]
+          description: Whether to allow or disallow transactions matching this control
+      required:
+        - controlType
+        - controlValue
+        - valueOperator
+
+    SingleTransactionAmountLimit:
+      type: object
+      properties:
+        maximumAmount:
+          type: number
+          format: double
+          description: Maximum amount allowed for a single transaction
+
+    ConditionalRule:
+      type: object
+      properties:
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Condition'
+          minItems: 1
+          description: Conditions that must be met for this rule to apply
+        velocityControls:
+          type: array
+          items:
+            $ref: '#/components/schemas/VelocityControl'
+        singleTransactionAmountLimit:
+          $ref: '#/components/schemas/SingleTransactionAmountLimit'
+        description:
+          type: string
+          description: Human-readable description of this conditional rule
+      required:
+        - conditions
+
+    Condition:
+      type: object
+      properties:
+        controlType:
+          type: string
+          enum: [MCC, MCCG, COUNTRY, CURRENCY, MERCHANT_DBA, TERMINAL_ID, DAY_OF_WEEK, TIME_OF_DAY]
+          description: Type of condition to check
+        controlValue:
+          type: string
+          description: Value to match against (may be a single value or comma-separated list)
+        valueOperator:
+          type: string
+          enum: [EQUAL, NOT_EQUAL]
+          description: Whether to match or exclude this value
+      required:
+        - controlType
+        - controlValue
+        - valueOperator
