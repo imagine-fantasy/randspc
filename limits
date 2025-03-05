@@ -1,0 +1,251 @@
+<userStyle>
+Let's simplify the SingleTransactionAmountLimit to be just a direct amount field! This makes the structure even cleaner - like replacing a box that holds one item with just the item itself.
+
+```yaml
+openapi: 3.0.0
+info:
+  title: Spend Control API
+  version: '1.0.0'
+  description: API for managing card spending controls
+
+paths:
+  /cards/{cardId}/spend-control:
+    get:
+      summary: Get spend control for a card
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpendControlResponse'
+    put:
+      summary: Update spend control for a card
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpendControlRequest'
+      responses:
+        '200':
+          description: Successfully updated
+        '400':
+          description: Validation error
+
+components:
+  schemas:
+    SpendControlRequest:
+      type: object
+      properties:
+        spendControl:
+          $ref: '#/components/schemas/SpendControl'
+      required:
+        - spendControl
+
+    SpendControlResponse:
+      type: object
+      properties:
+        spendControl:
+          $ref: '#/components/schemas/SpendControl'
+
+    SpendControl:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the spend control configuration
+        description:
+          type: string
+          description: Detailed description of the spend control
+        spendLimits:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpendLimit'
+          description: Collection of spend limit rules
+
+    SpendLimit:
+      type: object
+      properties:
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Condition'
+          description: Conditions that determine when this limit applies (empty means always applies)
+        cumulativeLimits:
+          type: array
+          items:
+            $ref: '#/components/schemas/CumulativeLimit'
+          description: Spending limits over various time periods
+        singleTransactionAmountLimit:
+          type: number
+          format: double
+          description: Maximum amount allowed for a single transaction
+        customControls:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomControl'
+          description: Additional controls for authorizing transactions
+
+    CumulativeLimit:
+      type: object
+      properties:
+        amount:
+          type: number
+          format: double
+          description: Maximum amount allowed in this period
+        period:
+          type: string
+          enum: [HOUR, DAILY, WEEK, MONTH, YEAR, LIFETIME, CYCLE]
+          description: Time period for this limit
+        transactionCount:
+          type: integer
+          description: Maximum number of transactions allowed in this period
+      required:
+        - period
+
+    CustomControl:
+      type: object
+      properties:
+        controlType:
+          type: string
+          enum: [MCC, MCCG, COUNTRY, CURRENCY, MERCHANT_DBA, TERMINAL_ID, DAY_OF_WEEK, TIME_OF_DAY]
+          description: Type of control being applied
+        controlValue:
+          type: string
+          description: Value to match against (may be a single value or comma-separated list)
+        valueOperator:
+          type: string
+          enum: [ALLOW, DISALLOW]
+          description: Whether to allow or disallow transactions matching this control
+      required:
+        - controlType
+        - controlValue
+        - valueOperator
+
+    Condition:
+      type: object
+      properties:
+        controlType:
+          type: string
+          enum: [MCC, MCCG, COUNTRY, CURRENCY, MERCHANT_DBA, TERMINAL_ID, DAY_OF_WEEK, TIME_OF_DAY]
+          description: Type of condition to check
+        controlValue:
+          type: string
+          description: Value to match against (may be a single value or comma-separated list)
+        valueOperator:
+          type: string
+          enum: [EQUAL, NOT_EQUAL]
+          description: Whether to match or exclude this value
+      required:
+        - controlType
+        - controlValue
+        - valueOperator
+```
+
+And here's a JSON example showing how this would look in practice with the simplified single transaction amount limit:
+
+```json
+{
+  "spendControl": {
+    "name": "Corporate Travel Card",
+    "description": "Standard configuration for employee travel expenses",
+    "spendLimits": [
+      {
+        "conditions": [],
+        "cumulativeLimits": [
+          {
+            "amount": 10000,
+            "period": "LIFETIME",
+            "transactionCount": 0
+          },
+          {
+            "amount": 2000,
+            "period": "MONTH",
+            "transactionCount": 0
+          },
+          {
+            "amount": 500,
+            "period": "DAILY",
+            "transactionCount": 10
+          }
+        ],
+        "singleTransactionAmountLimit": 1000,
+        "customControls": [
+          {
+            "controlType": "MCCG",
+            "controlValue": "RETAIL,RESTAURANT,TRAVEL,HOTEL",
+            "valueOperator": "ALLOW"
+          },
+          {
+            "controlType": "MCCG",
+            "controlValue": "GAMBLING,ADULT",
+            "valueOperator": "DISALLOW"
+          },
+          {
+            "controlType": "COUNTRY",
+            "controlValue": "USA,CAN",
+            "valueOperator": "ALLOW"
+          }
+        ]
+      },
+      {
+        "conditions": [
+          {
+            "controlType": "DAY_OF_WEEK",
+            "controlValue": "SATURDAY,SUNDAY",
+            "valueOperator": "EQUAL"
+          },
+          {
+            "controlType": "MCCG",
+            "controlValue": "RESTAURANT",
+            "valueOperator": "EQUAL"
+          }
+        ],
+        "cumulativeLimits": [
+          {
+            "amount": 200,
+            "period": "DAILY",
+            "transactionCount": 3
+          }
+        ],
+        "singleTransactionAmountLimit": 100
+      },
+      {
+        "conditions": [
+          {
+            "controlType": "MCCG",
+            "controlValue": "TRAVEL",
+            "valueOperator": "EQUAL"
+          }
+        ],
+        "cumulativeLimits": [
+          {
+            "amount": 1500,
+            "period": "DAILY",
+            "transactionCount": 5
+          }
+        ],
+        "singleTransactionAmountLimit": 1500
+      }
+    ]
+  }
+}
+```
+
+This simplification makes the structure even more elegant - the single transaction amount limit is now just a direct number value rather than a container object with only one field. It's like replacing a box that holds one pencil with just the pencil itself - more direct and intuitive!
+
+The JSON is now cleaner and more readable as well, with values like `"singleTransactionAmountLimit": 1000` being immediately clear without additional nesting. This is the kind of simplification that both developers and machines appreciate - less structure to parse while maintaining all the semantic meaning!
+</userStyle>​​​​​​​​​​​​​​​​
