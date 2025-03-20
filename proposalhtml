@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Server Architecture Optimization Proposal</title>
+<style>
+  body { font-family: Arial, sans-serif; line-height: 1.6; max-width: 1000px; margin: 0 auto; padding: 20px; }
+  table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+  th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+  th { background-color: #f2f2f2; }
+  tr:nth-child(even) { background-color: #f9f9f9; }
+  h1 { color: #333; }
+  h2 { color: #444; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+  h3 { color: #555; }
+  ul, ol { margin-bottom: 20px; }
+  strong { font-weight: bold; }
+</style>
+</head>
+<body>
+
+<h1>Server Architecture Optimization Proposal</h1>
+<h2>Three Clear Approaches to Infrastructure Efficiency</h2>
+
+<h3>Executive Summary</h3>
+
+<p>This proposal presents three distinct approaches to optimize our current server architecture, each offering different balances of cost savings, implementation complexity, and architectural change. Our goal is to reduce infrastructure costs while maintaining or enhancing performance and reliability. The analysis provides a framework for decision-making, with clear next steps regardless of which path is chosen.</p>
+
+<h3>Current Architecture</h3>
+
+<p>Our existing environment consists of:</p>
+
+<table>
+  <tr>
+    <th>Component</th>
+    <th>Quantity (Prod)</th>
+    <th>Quantity (DR)</th>
+    <th>Server Specs</th>
+    <th>Purpose</th>
+  </tr>
+  <tr>
+    <td>F5 Load Balancer</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>Traffic distribution, mTLS termination, client ID injection</td>
+  </tr>
+  <tr>
+    <td>Apache Webserver</td>
+    <td>13</td>
+    <td>13</td>
+    <td>8GB RAM</td>
+    <td>HTTP request handling</td>
+  </tr>
+  <tr>
+    <td>Tomcat Server</td>
+    <td>13</td>
+    <td>13</td>
+    <td>16GB RAM</td>
+    <td>Application hosting, SOAP/JSON transformation</td>
+  </tr>
+  <tr>
+    <td>AWS Processing</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>Backend processing</td>
+  </tr>
+</table>
+
+<p><strong>Current Flow:</strong></p>
+<ol>
+  <li>Client → F5 Load Balancer with client certificate</li>
+  <li>F5 validates certificate, terminates mTLS, injects client ID into header</li>
+  <li>Traffic routed to one of 13 Apache servers</li>
+  <li>Apache forwards to dedicated Tomcat server</li>
+  <li>Tomcat transforms requests (SOAP/JSON) and forwards to AWS for processing</li>
+  <li>Return traffic follows the reverse path</li>
+</ol>
+
+<p><strong>Current Authentication Model:</strong></p>
+<ul>
+  <li><strong>Certificate Management:</strong> Handled by central team (not application team)</li>
+  <li><strong>Certificate Validation:</strong> Performed at F5 layer</li>
+  <li><strong>Client Identification:</strong> F5 injects client ID into HTTP headers</li>
+  <li><strong>Application Authentication:</strong> Backend services trust and rely on these injected headers</li>
+</ul>
+
+<p><strong>Total Current Server Count:</strong> 52 servers (26 Apache + 26 Tomcat)</p>
+
+<h3>Proposal 1: Apache-Tomcat Co-location</h3>
+
+<table>
+  <tr>
+    <th>Component</th>
+    <th>Quantity (Prod)</th>
+    <th>Quantity (DR)</th>
+    <th>Server Specs</th>
+    <th>Purpose</th>
+  </tr>
+  <tr>
+    <td>F5 Load Balancer</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>Traffic distribution, mTLS termination (unchanged)</td>
+  </tr>
+  <tr>
+    <td>Combined Apache + Tomcat Server</td>
+    <td>13</td>
+    <td>13</td>
+    <td>24GB RAM</td>
+    <td>HTTP request handling and application hosting on same server</td>
+  </tr>
+  <tr>
+    <td>AWS Processing</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>Backend processing</td>
+  </tr>
+</table>
+
+<p><strong>Proposed Flow:</strong></p>
+<ol>
+  <li>Client → F5 Load Balancer (unchanged)</li>
+  <li>F5 validates certificate, terminates mTLS, injects client ID (unchanged)</li>
+  <li>Traffic routed to one of 13 combined servers</li>
+  <li>Apache and Tomcat components on same server process the request</li>
+  <li>Application transforms requests and forwards to AWS for processing</li>
+</ol>
+
+<p><strong>Authentication Model: Unchanged</strong></p>
+<ul>
+  <li>Certificate management remains with central team</li>
+  <li>No changes to validation or client identification processes</li>
+  <li>Backend services continue using existing authentication headers</li>
+</ul>
+
+<p><strong>Key Benefits:</strong></p>
+<ol>
+  <li><strong>Moderate Cost Reduction:</strong> 50% reduction in server count (from 52 to 26 servers)</li>
+  <li><strong>Resource Efficiency:</strong> Potentially better resource sharing between Apache and Tomcat</li>
+  <li><strong>Simplified Network Flow:</strong> Eliminates network hop between Apache and Tomcat</li>
+  <li><strong>Moderate Risk Profile:</strong> Maintains application architecture while changing only deployment model</li>
+</ol>
+
+<p><strong>Key Considerations:</strong></p>
+<ol>
+  <li><strong>F5 Configuration Change:</strong> Need to update F5 routing to point to new combined servers</li>
+  <li><strong>Resource Contention:</strong> Potential for Apache and Tomcat to compete for resources</li>
+  <li><strong>Memory Sizing:</strong> May need more than simple sum of previous RAM allocations</li>
+  <li><strong>Backup and Recovery:</strong> Need to update backup strategies for combined servers</li>
+</ol>
+
+<h3>Proposal 2: Server Density Increase</h3>
+
+<table>
+  <tr>
+    <th>Component</th>
+    <th>Quantity (Prod)</th>
+    <th>Quantity (DR)</th>
+    <th>Server Specs</th>
+    <th>Purpose</th>
+  </tr>
+  <tr>
+    <td>F5 Load Balancer</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>Traffic distribution, mTLS termination (unchanged)</td>
+  </tr>
+  <tr>
+    <td>Apache Webserver</td>
+    <td>6</td>
+    <td>6</td>
+    <td>8GB RAM</td>
+    <td>HTTP request handling</td>
+  </tr>
+  <tr>
+    <td>Tomcat Server</td>
+    <td>6</td>
+    <td>6</td>
+    <td>16GB RAM</td>
+    <td>Application hosting (2 instances per server)</td>
+  </tr>
+  <tr>
+    <td>AWS Processing</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>Backend processing</td>
+  </tr>
+</table>
+
+<p><strong>Proposed Flow:</strong></p>
+<ol>
+  <li>Client → F5 Load Balancer (unchanged)</li>
+  <li>F5 validates certificate, terminates mTLS, injects client ID (unchanged)</li>
+  <li>Traffic routed to one of 6 Apache servers</li>
+  <li>Apache forwards to one of 6 Tomcat servers, each hosting 2 Spring Boot instances</li>
+  <li>Application transforms requests and forwards to AWS for processing</li>
+</ol>
+
+<p><strong>Authentication Model: Unchanged</strong></p>
+<ul>
+  <li>Certificate management remains with central team</li>
+  <li>No changes to validation or client identification processes</li>
+  <li>Backend services continue using existing authentication headers</li>
+</ul>
+
+<p><strong>Key Benefits:</strong></p>
+<ol>
+  <li><strong>Significant Cost Reduction:</strong> 54% reduction in server footprint (from 52 to 24 servers)</li>
+  <li><strong>Minimal Risk:</strong> Preserves existing architectural patterns and authentication model</li>
+  <li><strong>Operational Familiarity:</strong> Maintains current operational procedures with minor adjustments</li>
+  <li><strong>Balanced Approach:</strong> Cost savings without architectural transformation risk</li>
+</ol>
+
+<p><strong>Key Considerations:</strong></p>
+<ol>
+  <li><strong>Resource Management:</strong> Need to ensure servers can handle increased density</li>
+  <li><strong>Configuration Management:</strong> Additional complexity in managing multiple instances per server</li>
+  <li><strong>Performance Testing:</strong> Thorough testing needed to validate density model</li>
+  <li><strong>Future Scalability:</strong> May eventually hit scaling limitations with this approach</li>
+</ol>
+
+<h3>Proposal 3: Akamai Edge Computing Transformation</h3>
+
+<table>
+  <tr>
+    <th>Component</th>
+    <th>Quantity (Prod)</th>
+    <th>Quantity (DR)</th>
+    <th>Purpose</th>
+  </tr>
+  <tr>
+    <td>Akamai Edge Platform</td>
+    <td>Service</td>
+    <td>Service</td>
+    <td>Traffic distribution, security, possible mTLS handling</td>
+  </tr>
+  <tr>
+    <td>Spring Boot with embedded Tomcat</td>
+    <td>-</td>
+    <td>-</td>
+    <td>Application hosting directly on AWS</td>
+  </tr>
+  <tr>
+    <td>AWS Processing</td>
+    <td>-</td>
+    <td>-</td>
+    <td>Backend processing</td>
+  </tr>
+</table>
+
+<p><strong>Proposed Flow:</strong></p>
+<ol>
+  <li>Client → Akamai Edge with client certificate</li>
+  <li>Akamai performs security functions and routes traffic</li>
+  <li>Spring Boot application with embedded Tomcat handles requests directly on AWS</li>
+  <li>Application transforms requests (SOAP/JSON) and processes via AWS backend</li>
+</ol>
+
+<p><strong>Authentication Transformation Needs:</strong></p>
+<ul>
+  <li><strong>Certificate Management:</strong> Would shift to application team (significant change)</li>
+  <li><strong>Certificate Validation:</strong> Must be implemented at Akamai or application layer</li>
+  <li><strong>Client Identification:</strong> Need to confirm Akamai can inject equivalent HTTP headers</li>
+  <li><strong>Application Changes:</strong> May require authentication logic updates if header format changes</li>
+</ul>
+
+<p><strong>Key Benefits:</strong></p>
+<ol>
+  <li><strong>Maximum Infrastructure Reduction:</strong> Elimination of all on-premises/dedicated servers</li>
+  <li><strong>Simplified Architecture:</strong> Removes multiple hops in the request flow</li>
+  <li><strong>Edge Computing Advantages:</strong> Security and performance benefits of content delivery network</li>
+  <li><strong>Modernized Application Stack:</strong> Fully cloud-native approach</li>
+</ol>
+
+<p><strong>Key Considerations:</strong></p>
+<ol>
+  <li><strong>Authentication Transformation:</strong> Critical change in responsibility and implementation</li>
+  <li><strong>Migration Complexity:</strong> Significant architectural change requiring careful planning</li>
+  <li><strong>Operational Model Shift:</strong> Move from infrastructure management to service management</li>
+  <li><strong>Dependency Management:</strong> New dependencies on Akamai capabilities and SLAs</li>
+</ol>
+
+<h3>Akamai Authentication Capabilities Analysis</h3>
+
+<p>Akamai does offer capabilities that could potentially replace the current F5 authentication model, but implementation would require careful planning:</p>
+
+<p><strong>Akamai Access Control Options:</strong></p>
+<ol>
+  <li><strong>Edge Authentication:</strong> Akamai can validate client certificates at the edge</li>
+  <li><strong>Header Injection:</strong> Akamai can insert custom headers based on authentication results</li>
+  <li><strong>API Gateway:</strong> Can transform authentication between different models</li>
+</ol>
+
+<p><strong>Critical Questions for Akamai Implementation:</strong></p>
+<ol>
+  <li><strong>Can Akamai inject client identifiers in the exact header format our backend services expect?</strong>
+    <ul>
+      <li>This is crucial for maintaining compatibility with existing services</li>
+      <li>May require custom Akamai configuration or edge computing functions</li>
+    </ul>
+  </li>
+  <li><strong>If header injection isn't possible or differs from current format:</strong>
+    <ul>
+      <li>Backend services would need modification to accept new authentication format</li>
+      <li>Additional development effort and testing would be required</li>
+      <li>Would need to create a transition strategy for authentication changes</li>
+    </ul>
+  </li>
+  <li><strong>How would certificate management responsibilities transition?</strong>
+    <ul>
+      <li>Current model: Central team handles all certificate management</li>
+      <li>Akamai model: Application team would likely need to take ownership</li>
+      <li>Would require new processes, skills, and possibly staffing adjustments</li>
+    </ul>
+  </li>
+  <li><strong>What would the certificate renewal process look like?</strong>
+    <ul>
+      <li>Need to understand Akamai's certificate management capabilities</li>
+      <li>May require new operational procedures and monitoring</li>
+    </ul>
+  </li>
+</ol>
+
+<h3>Authentication Impact Comparison</h3>
+
+<table>
+  <tr>
+    <th>Aspect</th>
+    <th>Proposal 1: Co-location</th>
+    <th>Proposal 2: Server Density</th>
+    <th>Proposal 3: Akamai</th>
+  </tr>
+  <tr>
+    <td>Certificate Management Responsibility</td>
+    <td>Remains with central team</td>
+    <td>Remains with central team</td>
+    <td>Shifts to application team</td>
+  </tr>
+  <tr>
+    <td>Certificate Validation Point</td>
+    <td>F5 (unchanged)</td>
+    <td>F5 (unchanged)</td>
+    <td>Akamai Edge</td>
+  </tr>
+  <tr>
+    <td>Header Injection Mechanism</td>
+    <td>Unchanged</td>
+    <td>Unchanged</td>
+    <td>Needs confirmation from Akamai</td>
+  </tr>
+  <tr>
+    <td>Backend Authentication Changes</td>
+    <td>None</td>
+    <td>None</td>
+    <td>Potentially required</td>
+  </tr>
+  <tr>
+    <td>Certificate Renewal Process</td>
+    <td>Unchanged</td>
+    <td>Unchanged</td>
+    <td>New process required</td>
+  </tr>
+  <tr>
+    <td>Authentication Testing Complexity</td>
+    <td>Low</td>
+    <td>Low</td>
+    <td>High</td>
+  </tr>
+</table>
+
+<h3>Critical Questions to Address Before Implementation</h3>
+
+<p>Before proceeding with any proposal, the following questions must be answered:</p>
+
+<h4>Performance and Capacity Questions:</h4>
+<ol>
+  <li><strong>What is the current peak load on Apache and Tomcat servers?</strong>
+    <ul>
+      <li>Critical for determining whether consolidation options are viable</li>
+      <li>Need to collect metrics on CPU, memory, I/O, and network utilization during peak periods</li>
+    </ul>
+  </li>
+  <li><strong>What is the current average utilization across the server fleet?</strong>
+    <ul>
+      <li>Will help identify potential waste and right-sizing opportunities</li>
+      <li>Key to validating the potential for consolidation</li>
+    </ul>
+  </li>
+  <li><strong>Are there seasonal or time-of-day patterns to our traffic?</strong>
+    <ul>
+      <li>Important for planning capacity in consolidated models</li>
+      <li>May influence the timing of implementation phases</li>
+    </ul>
+  </li>
+  <li><strong>What is our current failure tolerance model?</strong>
+    <ul>
+      <li>Need to understand how many server failures our current architecture can sustain</li>
+      <li>Critical for ensuring consolidated architectures maintain required resilience</li>
+    </ul>
+  </li>
+</ol>
+
+<h4>Authentication-Specific Questions for Akamai Proposal:</h4>
+<ol>
+  <li><strong>Can Akamai inject client identifiers in HTTP headers in the exact format our applications expect?</strong>
+    <ul>
+      <li>Critical for maintaining compatibility with existing backend services</li>
+      <li>May require custom Akamai configuration</li>
+    </ul>
+  </li>
+  <li><strong>What would be the process for certificate management and renewal with Akamai?</strong>
+    <ul>
+      <li>Need to understand operational implications of shift in responsibility</li>
+      <li>May require new skills and processes within the application team</li>
+    </ul>
+  </li>
+  <li><strong>What authentication information is maintained in the current client ID header?</strong>
+    <ul>
+      <li>Important for ensuring all necessary data is preserved in any new implementation</li>
+      <li>May affect complexity of Akamai configuration</li>
+    </ul>
+  </li>
+  <li><strong>How do backend services currently validate and use the injected headers?</strong>
+    <ul>
+      <li>Critical for understanding potential impact of any changes to header format</li>
+      <li>May influence migration approach and testing strategy</li>
+    </ul>
+  </li>
+</ol>
+
+<h3>Implementation Complexity Comparison</h3>
+
+<table>
+  <tr>
+    <th>Aspect</th>
+    <th>Proposal 1: Co-location</th>
+    <th>Proposal 2: Server Density</th>
+    <th>Proposal 3: Akamai</th>
+  </tr>
+  <tr>
+    <td>Architectural Change</td>
+    <td>Medium</td>
+    <td>Low</td>
+    <td>High</td>
+  </tr>
+  <tr>
+    <td>Development Effort</td>
+    <td>Low-Medium</td>
+    <td>Low</td>
+    <td>Medium-High</td>
+  </tr>
+  <tr>
+    <td>Testing Complexity</td>
+    <td>Medium</td>
+    <td>Medium</td>
+    <td>High</td>
+  </tr>
+  <tr>
+    <td>Operational Change</td>
+    <td>Medium</td>
+    <td>Low</td>
+    <td>High</td>
+  </tr>
+  <tr>
+    <td>Security Review</td>
+    <td>Moderate</td>
+    <td>Focused</td>
+    <td>Comprehensive</td>
+  </tr>
+  <tr>
+    <td>Rollback Complexity</td>
+    <td>Medium</td>
+    <td>Low</td>
+    <td>High</td>
+  </tr>
+  <tr>
+    <td>Authentication Impact</td>
+    <td>None</td>
+    <td>None</td>
+    <td>High</td>
+  </tr>
+  <tr>
+    <td>Time to Implement</td>
+    <td>2-3 months</td>
+    <td>1-2 months</td>
+    <td>3-6 months</td>
+  </tr>
+</table>
+
+<h3>Cost Analysis</h3>
+
+<p><strong>Proposal 1: Apache-Tomcat Co-location</strong></p>
+<ul>
+  <li>Reduction from 52 to 26 servers: 50% infrastructure reduction</li>
+  <li>Potential increase in per-server specifications</li>
+  <li>Moderate configuration costs</li>
+  <li>Limited migration costs</li>
+  <li>No authentication-related costs</li>
+</ul>
+
+<p><strong>Proposal 2: Server Density Increase</strong></p>
+<ul>
+  <li>Reduction from 52 to 24 servers: 54% infrastructure reduction</li>
+  <li>No new service costs</li>
+  <li>Minimal development costs</li>
+  <li>Limited migration costs</li>
+  <li>No authentication-related costs</li>
+</ul>
+
+<p><strong>Proposal 3: Akamai Transformation</strong></p>
+<ul>
+  <li>Elimination of all Apache and Tomcat servers: 100% infrastructure reduction</li>
+  <li>New costs: Akamai service fees</li>
+  <li>AWS compute costs for Spring Boot applications</li>
+  <li>Potential network egress cost changes</li>
+  <li><strong>Hidden costs:</strong> Team training for certificate management, potential development costs for auth changes</li>
+</ul>
+
+<h3>Risk Assessment</h3>
+
+<table>
+  <tr>
+    <th>Risk</th>
+    <th>Proposal 1: Co-location</th>
+    <th>Proposal 2: Server Density</th>
+    <th>Proposal 3: Akamai</th>
+  </tr>
+  <tr>
+    <td>Performance Degradation</td>
+    <td>Medium-High</td>
+    <td>Medium</td>
+    <td>Medium</td>
+  </tr>
+  <tr>
+    <td>Security Model Changes</td>
+    <td>Low</td>
+    <td>Low</td>
+    <td>High</td>
+  </tr>
+  <tr>
+    <td>Authentication Disruption</td>
+    <td>None</td>
+    <td>None</td>
+    <td>High</td>
+  </tr>
+  <tr>
+    <td>Implementation Failure</td>
+    <td>Low-Medium</td>
+    <td>Low</td>
+    <td>Medium</td>
+  </tr>
+  <tr>
+    <td>Vendor Lock-in</td>
+    <td>Low</td>
+    <td>Low</td>
+    <td>High</td>
+  </tr>
+  <tr>
+    <td>Operational Disruption</td>
+    <td>Medium</td>
+    <td>Low</td>
+    <td>Medium</td>
+  </tr>
+  <tr>
+    <td>Cost Overruns</td>
+    <td>Low</td>
+    <td>Low</td>
+    <td>Medium</td>
+  </tr>
+  <tr>
+    <td>Scalability Limits</td>
+    <td>Medium</td>
+    <td>Medium</td>
+    <td>Low</td>
+  </tr>
+</table>
+
+<h3>Phased Implementation Recommendation</h3>
+
+<p>For any proposal, a phased implementation is recommended:</p>
+
+<p><strong>Phase 1: Assessment and Validation</strong></p>
+<ul>
+  <li>Collect comprehensive performance metrics</li>
+  <li>Create test environment for chosen approach</li>
+  <li>Validate assumptions through controlled testing</li>
+  <li>Develop detailed implementation plan</li>
+  <li>For Proposal 3: Confirm Akamai authentication capabilities</li>
+</ul>
+
+<p><strong>Phase 2: DR Environment Implementation</strong></p>
+<ul>
+  <li>Implement changes in DR environment first</li>
+  <li>Conduct thorough performance testing</li>
+  <li>Refine approach based on findings</li>
+  <li>Document operational procedures</li>
+  <li>For Proposal 3: Develop and test authentication transition approach</li>
+</ul>
+
+<p><strong>Phase 3: Production Rollout</strong></p>
+<ul>
+  <li>Implement changes using blue-green or gradual approach</li>
+  <li>Monitor performance closely during transition</li>
+  <li>Be prepared to roll back if issues arise</li>
+  <li>Collect metrics to validate benefits</li>
+</ul>
+
+<p><strong>Phase 4: Optimization</strong></p>
+<ul>
+  <li>Fine-tune configuration based on production experience</li>
+  <li>Document lessons learned</li>
+  <li>Consider further optimization opportunities</li>
+  <li>Develop long-term scaling strategy</li>
+</ul>
+
+<h3>Conclusion and Recommendation</h3>
+
+<p>Each proposal offers a different balance of risk, reward, and complexity:</p>
+
+<p><strong>Proposal 1 (Apache-Tomcat Co-location)</strong> provides a middle ground with moderate cost savings and implementation complexity, while potentially improving performance through reduced network hops.</p>
+
+<p><strong>Proposal 2 (Server Density Increase)</strong> offers substantial cost savings with minimal risk and disruption. This represents a pragmatic optimization without significant architectural changes or authentication impact.</p>
+
+<p><strong>Proposal 3 (Akamai Transformation)</strong> represents the most transformative approach with the highest potential long-term benefits, but also carries the highest risk, particularly around authentication changes and shifts in certificate management responsibility.</p>
+
+<p>Based on the organization's risk tolerance and strategic direction, we recommend:</p>
+
+<ol>
+  <li><strong>If balanced approach with potential performance benefits is desired:</strong> Proceed with Proposal 1</li>
+  <li><strong>If minimizing risk while achieving significant savings is the priority:</strong> Proceed with Proposal 2</li>
+  <li><strong>If modernization and long-term architectural evolution is the priority:</strong> Proceed with Proposal 3, but first validate Akamai's authentication capabilities</li>
+</ol>
+
+<h3>Next Steps</h3>
+
+<p><strong>1. Immediate Actions (Next 2 Weeks):</strong></p>
+<ul>
+  <li>Implement comprehensive performance monitoring</li>
+  <li>Collect baseline metrics during peak and normal operations</li>
+  <li>Schedule technical review meeting to answer critical questions</li>
+  <li>Create test environment for preliminary validation</li>
+  <li>For Proposal 3: Engage with Akamai to discuss certificate and header injection capabilities</li>
+</ul>
+
+<p><strong>2. Short-Term Actions (Next 30 Days):</strong></p>
+<ul>
+  <li>Select preferred approach based on technical review findings</li>
+  <li>Develop detailed implementation plan for chosen approach</li>
+  <li>Define success metrics and acceptance criteria</li>
+  <li>Schedule implementation kickoff</li>
+  <li>For Proposal 3: Develop certificate management transition plan</li>
+</ul>
+
+<p><strong>3. Key Deliverables:</strong></p>
+<ul>
+  <li>Performance baseline report</li>
+  <li>Technical feasibility assessment</li>
+  <li>Authentication impact assessment (for Proposal 3)</li>
+  <li>Detailed implementation plan</li>
+  <li>Success criteria document</li>
+  <li>Risk mitigation strategy</li>
+</ul>
+
+</body>
+</html>
