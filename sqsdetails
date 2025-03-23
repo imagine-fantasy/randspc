@@ -8,22 +8,14 @@
 @Configuration
 public class AwsSqsConfig {
     
+       @Value("${cloud.aws.region.static:us-east-1}")
+    private String region;
+
     @Bean
-    @Profile("local")
-    public AmazonSQSAsync amazonSQSLocalAsync() {
-        // Use local credentials
-        return AmazonSQSAsyncClientBuilder.standard()
-                .withRegion("us-east-1")
-                .withCredentials(new DefaultAWSCredentialsProviderChain())
-                .build();
-    }
-    
-    @Bean
-    @Profile("aws")
-    public AmazonSQSAsync amazonSQSAwsAsync() {
-        // Use instance role - no credential provider needed!
-        return AmazonSQSAsyncClientBuilder.standard()
-                .withRegion("us-east-1")
+    public SqsClient sqsClient() {
+        return SqsClient.builder()
+                .region(Region.of(region))
+                // Uses default credential provider chain automatically
                 .build();
     }
 }
