@@ -1,0 +1,51 @@
+<dependency>
+    <groupId>software.amazon.awssdk</groupId>
+    <artifactId>sqs</artifactId>
+    <version>2.21.42</version>
+</dependency>
+
+
+@Configuration
+public class AwsSqsConfig {
+    
+    @Bean
+    @Profile("local")
+    public AmazonSQSAsync amazonSQSLocalAsync() {
+        // Use local credentials
+        return AmazonSQSAsyncClientBuilder.standard()
+                .withRegion("us-east-1")
+                .withCredentials(new DefaultAWSCredentialsProviderChain())
+                .build();
+    }
+    
+    @Bean
+    @Profile("aws")
+    public AmazonSQSAsync amazonSQSAwsAsync() {
+        // Use instance role - no credential provider needed!
+        return AmazonSQSAsyncClientBuilder.standard()
+                .withRegion("us-east-1")
+                .build();
+    }
+}
+
+
+@Service
+public class SqsMessageService {
+    private final AmazonSQSAsync sqsClient;
+    private final String queueName;
+    
+    public SqsMessageService(
+            AmazonSQSAsync sqsClient,
+            @Value("${queue.name}") String queueName) {
+        this.sqsClient = sqsClient;
+        this.queueName = queueName;
+    }
+    
+    public void sendMessage(String message) {
+        // Get the URL from the queue name (cached after first lookup)
+        String queueUrl = sqsClient.getQueueUrl(queueName).getQueueUrl();
+        
+        // Send the message using the discovered URL
+        sqsClient.sendMessage(queueUrl, message);
+    }
+}
