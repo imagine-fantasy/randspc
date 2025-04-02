@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Card Tokenization Demo: Key Points</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #172B4D;
+            border-bottom: 1px solid #DFE1E6;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #172B4D;
+            margin-top: 20px;
+        }
+        ul {
+            margin-bottom: 20px;
+        }
+        li {
+            margin-bottom: 5px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #DFE1E6;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #F4F5F7;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #FAFBFC;
+        }
+    </style>
+</head>
+<body>
+    <h1>Card Tokenization Demo: Key Points</h1>
+
+    <h2>Overview</h2>
+    <p>Our Commercial Card API now integrates with TOME tokenization service to eliminate storage of sensitive card numbers, dramatically reducing PCI scope while maintaining full functionality.
+    <br><em>For complete background: Reference our Card Ref ID documentation</em></p>
+
+    <h2>Integration Details</h2>
+    <ul>
+        <li><strong>Current Namespace</strong>: <code>tometesting5</code> (UAT/POC workspace)</li>
+        <li><strong>Future Namespace</strong>: <code>commercialcardcreditcard</code> (Production)</li>
+        <li><strong>Integration Component</strong>: TOME Client library with built-in retry functionality</li>
+    </ul>
+
+    <h2>TOME Integration Request Status</h2>
+    <ul>
+        <li>Successfully onboarded to <code>tometesting5</code> namespace</li>
+        <li>Pending formal onboarding to production namespace</li>
+        <li>Using standard TOME APIs for tokenization operations</li>
+    </ul>
+
+    <h2>TOME Client Implementation</h2>
+    <ul>
+        <li>Utilizing TOME client library for secure communication</li>
+        <li>Features automatic retry for HTTP 207 and 503 errors</li>
+        <li>Handles token collision scenarios gracefully</li>
+    </ul>
+
+    <h2>Demo Flows</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Flow</th>
+                <th>Input</th>
+                <th>Process</th>
+                <th>Output</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Tokenization</strong></td>
+                <td>Card Number</td>
+                <td>Card API → TOME → Generate Token</td>
+                <td>Card Ref ID</td>
+            </tr>
+            <tr>
+                <td><strong>Detokenization</strong></td>
+                <td>Card Ref ID</td>
+                <td>Card API → TOME → Retrieve Card</td>
+                <td>Card Number</td>
+            </tr>
+            <tr>
+                <td><strong>Lookup</strong></td>
+                <td>Card Number</td>
+                <td>Card API → TOME → Find Token</td>
+                <td>Card Ref ID</td>
+            </tr>
+            <tr>
+                <td><strong>Retry Flow</strong> (if time permits)</td>
+                <td>Simulated 207/503 error</td>
+                <td>Automatic retry via TOME client</td>
+                <td>Successful completion after retry</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Next Steps</h2>
+    <ul>
+        <li>Complete migration to production namespace</li>
+        <li>Implement comprehensive monitoring</li>
+        <li>Roll out to first production clients</li>
+    </ul>
+</body>
+</html>
