@@ -1,0 +1,2378 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spend Control Configurator</title>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --primary-dark: #2563eb;
+            --primary-light: #93c5fd;
+            --secondary-color: #f59e0b;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --border-color: #e5e7eb;
+            --text-color: #374151;
+            --background-color: #f5f5f5;
+            --card-color: #ffffff;
+            --card-accent-color: #f9fafb;
+            --disabled-color: #d1d5db;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.5;
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            background: var(--background-color);
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card-color);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 0.5rem;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-success {
+            background: var(--success-color);
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-secondary {
+            background: var(--secondary-color);
+        }
+
+        .btn-secondary:hover {
+            background: #d97706;
+        }
+
+        .btn-disabled {
+            background: var(--disabled-color);
+            cursor: not-allowed;
+        }
+
+        .btn-disabled:hover {
+            background: var(--disabled-color);
+        }
+
+        .json-preview {
+            background: #f9fafb;
+            padding: 1rem;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+
+        .section {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .base-control-section {
+            border: 2px solid var(--primary-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            background-color: rgba(59, 130, 246, 0.05);
+        }
+
+        .conditional-control-section {
+            border: 2px solid var(--secondary-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background-color: rgba(245, 158, 11, 0.05);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .control-header {
+            padding: 0.5rem;
+            background-color: var(--card-accent-color);
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            align-items: center;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            margin-left: 0.5rem;
+            cursor: help;
+        }
+
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 250px;
+            background-color: #374151;
+            color: white;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -125px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .delete-btn {
+            background: var(--danger-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .copy-btn {
+            background: var(--success-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 1rem;
+        }
+
+        .error-message {
+            color: var(--danger-color);
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+
+        .warning-message {
+            color: var(--warning-color);
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+
+        .info-message {
+            color: var(--primary-color);
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+
+        .form-control.has-error {
+            border-color: var(--danger-color);
+        }
+
+        .plain-english-section {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .plain-english-text {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            white-space: pre-wrap;
+            margin: 0;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: #4b5563;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .time-range {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .app-title {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-type-selector {
+            display: flex;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .card-type-option {
+            flex: 1;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            background: #f9fafb;
+            border-right: 1px solid var(--border-color);
+            transition: background-color 0.3s;
+        }
+
+        .card-type-option:last-child {
+            border-right: none;
+        }
+
+        .card-type-option.selected {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .card-type-description {
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            color: inherit;
+            opacity: 0.9;
+        }
+
+        .validation-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-left: 0.5rem;
+        }
+
+        .validation-badge.success {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
+
+        .validation-badge.error {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--danger-color);
+        }
+
+        .validation-badge.warning {
+            background-color: rgba(245, 158, 11, 0.1);
+            color: var(--warning-color);
+        }
+
+        /* Fixed custom period fields spacing */
+        .custom-period-fields {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+            width: 100%;
+            grid-column: 1 / span 3;
+        }
+
+        .control-type-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+        }
+
+        .base-control-badge {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+        }
+
+        .conditional-control-badge {
+            background-color: rgba(245, 158, 11, 0.1);
+            color: var(--secondary-color);
+            border: 1px solid var(--secondary-color);
+        }
+
+        .divider {
+            height: 1px;
+            background-color: var(--border-color);
+            margin: 1.5rem 0;
+        }
+
+        /* Improved summary styling */
+        .summary-section {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .summary-section:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .summary-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-subtitle {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #374151;
+            margin: 1rem 0 0.5rem 0;
+        }
+
+        .summary-rule-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #4b5563;
+            margin: 0.75rem 0 0.25rem 0;
+        }
+
+        .summary-list {
+            margin: 0.5rem 0 0.5rem 1rem;
+            padding-left: 0;
+        }
+
+        .summary-list-item {
+            margin-bottom: 0.3rem;
+            list-style-type: disc;
+        }
+
+        .summary-highlight {
+            font-weight: 500;
+            color: #4b5563;
+        }
+
+        .summary-base {
+            border-left: 4px solid var(--primary-color);
+            padding-left: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .summary-conditional {
+            border-left: 4px solid var(--secondary-color);
+            padding-left: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .credit-limit-badge {
+            background-color: #fef3c7;
+            color: #92400e;
+            border: 1px solid #f59e0b;
+            border-radius: 4px;
+            padding: 0.1rem 0.3rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-left: 0.3rem;
+        }
+
+        /* Fix spacing in the form */
+        .limit-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1 class="app-title">Spend Control Configurator</h1>
+    <div class="container">
+        <div class="card">
+            <div id="builder-form"></div>
+        </div>
+        <div class="card">
+            <div id="output-section"></div>
+        </div>
+    </div>
+
+    <script>
+        // Constants for card types - easier to change globally
+        const CARD_TYPES = {
+            VIRTUAL: 'virtual',
+            INDIVIDUAL: 'individual'
+        };
+
+        const CARD_TYPE_LABELS = {
+            [CARD_TYPES.VIRTUAL]: 'Virtual Card',
+            [CARD_TYPES.INDIVIDUAL]: 'Individual Card'
+        };
+
+        const PERIOD_TYPES = {
+            ALL: ['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY', 'LIFETIME', 'CYCLE', 'CUSTOM'],
+            // Virtual cards support WEEKLY, support LIFETIME instead of CYCLE
+            [CARD_TYPES.VIRTUAL]: ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY', 'LIFETIME', 'CUSTOM'],
+            // Individual cards DON'T support WEEKLY, support CYCLE instead of LIFETIME
+            [CARD_TYPES.INDIVIDUAL]: ['DAILY', 'MONTHLY', 'QUARTERLY', 'YEARLY', 'CYCLE', 'CUSTOM']
+        };
+
+        const CONTROL_TYPES = {
+            MCC: 'MCC',
+            MCC_GROUP: 'MCC_GROUP',
+            COUNTRY: 'COUNTRY',
+            COUNTRY_SUBDIVISION: 'COUNTRY_SUBDIVISION',
+            CURRENCY: 'CURRENCY',
+            DAY_OF_WEEK: 'DAY_OF_WEEK',
+            TIME_OF_DAY: 'TIME_OF_DAY',
+            TRANSACTION_TYPE: 'TRANSACTION_TYPE'
+        };
+
+        // Only MCC_GROUP is supported for conditions currently
+        const CONDITION_TYPES = {
+            MCC_GROUP: 'MCC_GROUP'
+        };
+
+        const VALUE_OPERATORS = {
+            EQUAL: 'EQUAL',
+            NOT_EQUAL: 'NOT_EQUAL',
+            ALLOW: 'ALLOW',
+            DISALLOW: 'DISALLOW'
+        };
+
+        const DAYS_OF_WEEK = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+
+        // Updated transaction types based on card type
+        const TRANSACTION_TYPES = {
+            [CARD_TYPES.VIRTUAL]: ['DEBIT_ADJUSTMENT', 'PURCHASE', 'CASH_DISBURSMENT', 'CREDIT_ADJUSTMENT', 'PURCHASE_RETURN', 'ECOMMERCE', 'MAIL_PHONE_ORDER'],
+            [CARD_TYPES.INDIVIDUAL]: ['ECOMMERCE', 'CASH_DISBURSMENT']
+        };
+
+        const HELP_TEXTS = {
+            cardType: {
+                [CARD_TYPES.VIRTUAL]: 'Virtual Card (Declining Balance): The balance can only decrease over time, supports LIFETIME limits',
+                [CARD_TYPES.INDIVIDUAL]: 'Individual Card (Refreshing Balance): The credit limit refreshes each billing cycle, supports CYCLE limits'
+            },
+            baseControl: 'The base spend control applies to all transactions. Every card must have exactly one base spend control.',
+            conditionalControl: 'Conditional spend controls only apply when specific conditions are met. Only available for individual cards.',
+            name: 'Name for this spend control (1-50 characters)',
+            description: 'Detailed description of what this spend control does (1-200 characters)',
+            conditions: 'Conditions determine when this spend control applies',
+            cumulativeLimits: 'Set spending limits over various time periods',
+            singleTransactionAmountLimit: 'Maximum amount allowed for any single transaction (minimum $0.01)',
+            customControls: 'Controls to allow or disallow specific transaction types (only available for base spend controls)',
+            mcc: 'Merchant Category Codes: 4-digit codes that classify business types',
+            mccGroup: 'Merchant Category Groups: Categories that group similar merchant types',
+            country: 'ISO country codes (2-letter codes like US, CA, GB)',
+            countrySubdivision: 'Country subdivisions in format XX-YY (e.g., US-TX, CA-BC)',
+            currency: 'ISO currency codes (e.g., USD, EUR, GBP)',
+            dayOfWeek: 'Days when this control applies',
+            timeOfDay: 'Time range when this control applies',
+            transactionType: 'Types of transactions like purchases or ATM withdrawals',
+            customPeriod: 'Define a custom time period with specific start date and duration',
+            creditLimit: {
+                [CARD_TYPES.VIRTUAL]: 'For Virtual Cards, the LIFETIME amount limit represents the card\'s credit limit',
+                [CARD_TYPES.INDIVIDUAL]: 'For Individual Cards, the CYCLE amount limit represents the card\'s credit limit'
+            }
+        };
+
+        const state = {
+            cardType: CARD_TYPES.VIRTUAL,
+            spendControls: [],
+            errors: new Map(),
+            warnings: new Map()
+        };
+
+        function initializeControl(isConditional = false) {
+            const newControl = {
+                name: '',
+                description: '',
+                cumulativeLimits: [],
+                singleTransactionAmountLimit: null
+            };
+
+            if (isConditional) {
+                newControl.conditions = [{
+                    conditionType: 'MCC_GROUP',
+                    conditionValue: '',
+                    conditionValueOperator: 'EQUAL'
+                }];
+            } else {
+                newControl.customControls = [];
+            }
+
+            return newControl;
+        }
+
+        function addSpendControl(isConditional = false) {
+            if (isConditional && state.cardType !== CARD_TYPES.INDIVIDUAL) {
+                alert('Conditional spend controls are only available for Individual cards.');
+                return;
+            }
+
+            const baseControlExists = state.spendControls.some(control => !control.conditions);
+
+            if (isConditional && !baseControlExists) {
+                alert('You must create a base spend control before adding conditional controls.');
+                return;
+            }
+
+            // Check if there's a base control with LIFETIME period
+            if (isConditional) {
+                const baseControl = state.spendControls.find(control => !control.conditions);
+                const hasLifetimePeriod = baseControl && baseControl.cumulativeLimits.some(limit => limit.period === 'LIFETIME');
+
+                if (hasLifetimePeriod) {
+                    alert('Cannot add conditional controls when a LIFETIME period is present in the base control.');
+                    return;
+                }
+            }
+
+            state.spendControls.push(initializeControl(isConditional));
+            validateState();
+            render();
+        }
+
+        function deleteSpendControl(index) {
+            const isBaseControl = !state.spendControls[index].conditions;
+
+            if (isBaseControl && state.spendControls.filter(control => !control.conditions).length <= 1) {
+                if (state.spendControls.some(control => control.conditions)) {
+                    alert('Cannot delete the base control while conditional controls exist.');
+                    return;
+                }
+            }
+
+            state.spendControls.splice(index, 1);
+            validateState();
+            render();
+        }
+
+        function updateControlBasicInfo(index, field, value) {
+            state.spendControls[index][field] = value;
+            validateState();
+            render();
+        }
+
+        function addCondition(controlIndex) {
+            if (!state.spendControls[controlIndex].conditions) {
+                return;
+            }
+
+            // Get existing condition types
+            const existingConditionTypes = new Set(
+                state.spendControls[controlIndex].conditions.map(c => c.conditionType)
+            );
+
+            // Find a condition type that isn't already used
+            const availableTypes = Object.values(CONDITION_TYPES).filter(type => !existingConditionTypes.has(type));
+
+            if (availableTypes.length === 0) {
+                alert("You've already added all possible condition types. Each condition type can only be used once per control.");
+                return;
+            }
+
+            state.spendControls[controlIndex].conditions.push({
+                conditionType: availableTypes[0],
+                conditionValue: '',
+                conditionValueOperator: 'EQUAL'
+            });
+
+            validateState();
+            render();
+        }
+
+
+        // And update updateCondition to prevent switching to a duplicate type
+        function updateCondition(controlIndex, conditionIndex, field, value) {
+            // If changing condition type, check if it would create a duplicate
+            if (field === 'conditionType') {
+                const existingTypes = state.spendControls[controlIndex].conditions
+                    .filter((_, idx) => idx !== conditionIndex)
+                    .map(c => c.conditionType);
+
+                if (existingTypes.includes(value)) {
+                    alert(`This control already has a ${value} condition. Each condition type can only be used once per control.`);
+                    return;
+                }
+            }
+
+            // Ensure conditionValueOperator is uppercase for consistency
+            if (field === 'conditionValueOperator') {
+                value = value.toUpperCase();
+            }
+
+            state.spendControls[controlIndex].conditions[conditionIndex][field] = value;
+            validateState();
+            render();
+        }
+        function deleteCondition(controlIndex, conditionIndex) {
+            const conditions = state.spendControls[controlIndex].conditions;
+
+            if (conditions.length <= 1) {
+                alert("Conditional spend controls must have at least one condition.");
+                return;
+            }
+
+            conditions.splice(conditionIndex, 1);
+            validateState();
+            render();
+        }
+
+        function getAvailablePeriods(controlIndex) {
+            const control = state.spendControls[controlIndex];
+            const isConditional = !!control.conditions;
+
+            let availablePeriods;
+            if (state.cardType === CARD_TYPES.VIRTUAL) {
+                availablePeriods = [...PERIOD_TYPES[CARD_TYPES.VIRTUAL]];
+            } else {
+                availablePeriods = [...PERIOD_TYPES[CARD_TYPES.INDIVIDUAL]];
+            }
+
+            const usedPeriods = new Set(control.cumulativeLimits.map(limit => limit.period));
+
+            return availablePeriods.filter(period => !usedPeriods.has(period));
+        }
+
+        function addCumulativeLimit(controlIndex) {
+            const availablePeriods = getAvailablePeriods(controlIndex);
+
+            if (availablePeriods.length === 0) { // Fixed typo: was "a" instead of "0"
+                alert('All available period types are already in use.');
+                return;
+            }
+
+            const control = state.spendControls[controlIndex];
+            const isConditional = !!control.conditions;
+
+            const newLimit = {
+                amountLimit: 1000,
+                period: availablePeriods[0]
+            };
+
+            if (newLimit.period === 'CUSTOM') {
+                // Set default date to today (not past)
+                newLimit.customBeginDate = new Date().toISOString().split('T')[0];
+                newLimit.customDaysCount = 30;
+            }
+
+            control.cumulativeLimits.push(newLimit);
+            validateState();
+            render();
+        }
+
+        function updateCumulativeLimit(controlIndex, limitIndex, field, value) {
+            const limit = state.spendControls[controlIndex].cumulativeLimits[limitIndex];
+
+            if (field === 'amountLimit') {
+                // Ensure we have at most 2 decimal places
+                const floatValue = parseFloat(value) || 0;
+                limit[field] = parseFloat(floatValue.toFixed(2));
+            } else if (field === 'customDaysCount' || field === 'transactionCount') {
+                limit[field] = parseInt(value) || 0;
+            } else if (field === 'customBeginDate') {
+                limit[field] = value;
+            } else if (field === 'period') {
+                const oldPeriod = limit.period;
+                limit.period = value;
+
+                if (value === 'CUSTOM') {
+                    limit.customBeginDate = new Date().toISOString().split('T')[0];
+                    limit.customDaysCount = 30;
+                } else if (oldPeriod === 'CUSTOM') {
+                    delete limit.customBeginDate;
+                    delete limit.customDaysCount;
+                }
+
+                // If changing to LIFETIME with transactionCount, restrict to max 1
+                if (value === 'LIFETIME' && limit.transactionCount && limit.transactionCount > 1) {
+                    limit.transactionCount = 1;
+                }
+            } else {
+                limit[field] = value;
+            }
+
+            validateState();
+            render();
+        }
+
+        function deleteCumulativeLimit(controlIndex, limitIndex) {
+            state.spendControls[controlIndex].cumulativeLimits.splice(limitIndex, 1);
+            validateState();
+            render();
+        }
+
+        function enableSingleTransactionLimit(controlIndex) {
+            state.spendControls[controlIndex].singleTransactionAmountLimit = 1000;
+            validateState();
+            render();
+        }
+
+        function updateSingleTransactionLimit(controlIndex, value) {
+            const floatValue = parseFloat(value) || 0;
+            state.spendControls[controlIndex].singleTransactionAmountLimit = parseFloat(floatValue.toFixed(2));
+            validateState();
+            render();
+        }
+
+        function disableSingleTransactionLimit(controlIndex) {
+            state.spendControls[controlIndex].singleTransactionAmountLimit = null;
+            validateState();
+            render();
+        }
+
+        function getAvailableControlTypes(controlIndex) {
+            const control = state.spendControls[controlIndex];
+            if (!control.customControls) return [];
+
+            const usedTypes = new Set(control.customControls.map(c => c.controlType));
+
+            // Individual cards only support CURRENCY for custom controls
+            if (state.cardType === CARD_TYPES.INDIVIDUAL) {
+                if (usedTypes.has(CONTROL_TYPES.CURRENCY)) {
+                    return [];
+                }
+                return [CONTROL_TYPES.CURRENCY];
+            }
+
+            // Virtual cards don't support CURRENCY
+            if (state.cardType === CARD_TYPES.VIRTUAL) {
+                return Object.values(CONTROL_TYPES)
+                    .filter(type => type !== CONTROL_TYPES.CURRENCY && !usedTypes.has(type));
+            }
+
+            return Object.values(CONTROL_TYPES).filter(type => !usedTypes.has(type));
+        }
+
+        function addCustomControl(controlIndex) {
+            const availableTypes = getAvailableControlTypes(controlIndex);
+
+            if (availableTypes.length === 0) {
+                if (state.cardType === CARD_TYPES.INDIVIDUAL) {
+                    alert('Individual cards only support CURRENCY for custom controls, and it\'s already added.');
+                } else if (state.cardType === CARD_TYPES.VIRTUAL) {
+                    alert('Virtual cards don\'t support CURRENCY for custom controls. All other control types are already in use.');
+                } else {
+                    alert('All control types are already in use.');
+                }
+                return;
+            }
+
+            state.spendControls[controlIndex].customControls.push({
+                controlType: availableTypes[0],
+                controlValue: '',
+                controlValueOperator: 'ALLOW'
+            });
+
+            validateCustomControls();
+            render();
+        }
+
+        // Helper function to check for duplicate values in comma-separated list
+        function hasDuplicateValues(valueStr) {
+            if (!valueStr || valueStr.trim() === '') return false;
+
+            const values = valueStr.split(',').map(v => v.trim()).filter(v => v);
+            const uniqueValues = new Set(values);
+            return values.length !== uniqueValues.size;
+        }
+
+        // Get duplicate values as a string
+        function getDuplicateValues(valueStr) {
+            if (!valueStr || valueStr.trim() === '') return '';
+
+            const values = valueStr.split(',').map(v => v.trim()).filter(v => v);
+            const seen = new Set();
+            const duplicates = new Set();
+
+            values.forEach(v => {
+                if (seen.has(v)) {
+                    duplicates.add(v);
+                }
+                seen.add(v);
+            });
+
+            return Array.from(duplicates).join(', ');
+        }
+
+        function updateCustomControl(controlIndex, customControlIndex, field, value) {
+            const control = state.spendControls[controlIndex].customControls[customControlIndex];
+
+            if (field === 'controlType') {
+                // Individual cards only support CURRENCY
+                if (state.cardType === CARD_TYPES.INDIVIDUAL && value !== 'CURRENCY') {
+                    alert('Individual cards only support CURRENCY for custom controls.');
+                    return;
+                }
+
+                // Virtual cards don't support CURRENCY
+                if (state.cardType === CARD_TYPES.VIRTUAL && value === 'CURRENCY') {
+                    alert('Virtual cards don\'t support CURRENCY for custom controls.');
+                    return;
+                }
+
+                control.controlType = value;
+                control.controlValue = '';
+
+                if (value === 'TIME_OF_DAY') {
+                    control.controlValue = '00:00-23:59';
+                }
+            } else if (field === 'controlValueOperator') {
+                // Virtual cards don't support DISALLOW
+                if (state.cardType === CARD_TYPES.VIRTUAL && value === 'DISALLOW') {
+                    alert('Virtual cards do not support the DISALLOW operator.');
+                    return;
+                }
+                control[field] = value;
+            } else if (field === 'controlValue') {
+                // Check for blank value
+                if (!value || value.trim() === '') {
+                    alert(`${control.controlType} control value cannot be blank. Please enter a valid value.`);
+                    return;
+                }
+
+                // Format specific validations
+                if (control.controlType === 'COUNTRY') {
+                    // Validate two-letter country codes
+                    if (value && !/^([A-Z]{2})(,[A-Z]{2})*$/.test(value)) {
+                        alert('Country codes must be 2-letter ISO codes (e.g., US,CA,GB)');
+                        return;
+                    }
+
+                    // Check for duplicates
+                    if (hasDuplicateValues(value)) {
+                        alert(`Duplicate country codes found: ${getDuplicateValues(value)}. Each code must be unique.`);
+                        return;
+                    }
+                } else if (control.controlType === 'COUNTRY_SUBDIVISION') {
+                    // Validate country subdivision format (XX-YY)
+                    if (value && !/^([A-Z]{2,3}-[A-Z0-9]{2,3})(,[A-Z]{2,3}-[A-Z0-9]{2,3})*$/.test(value)) {
+                        alert('Country subdivisions must be in format XX-YY (e.g., US-TX,CA-BC)');
+                        return;
+                    }
+
+                    // Check for duplicates
+                    if (hasDuplicateValues(value)) {
+                        alert(`Duplicate subdivisions found: ${getDuplicateValues(value)}. Each subdivision must be unique.`);
+                        return;
+                    }
+                } else if (control.controlType === 'CURRENCY') {
+                    // Check for duplicates
+                    if (hasDuplicateValues(value)) {
+                        alert(`Duplicate currency codes found: ${getDuplicateValues(value)}. Each currency must be unique.`);
+                        return;
+                    }
+                } // In updateCustomControl, add after the other format validations:
+                else if (control.controlType === 'MCC') {
+                    // Validate MCC codes are 4-digit numbers
+                    const mccCodes = value.split(',').map(c => c.trim()).filter(c => c);
+                    const invalidMccs = mccCodes.filter(code => !/^\d{4}$/.test(code));
+
+                    if (invalidMccs.length > 0) {
+                        alert(`Invalid MCC codes: ${invalidMccs.join(', ')}. MCC must be 4-digit numbers (e.g., 1234, 5678)`);
+                        return;
+                    }
+
+                    // Check for duplicates
+                    if (hasDuplicateValues(value)) {
+                        alert(`Duplicate MCC codes found: ${getDuplicateValues(value)}. Each code must be unique.`);
+                        return;
+                    }
+                }
+
+
+                else if (control.controlType === 'TRANSACTION_TYPE') {
+                    // Check for unsupported transaction types
+                    const validTypes = TRANSACTION_TYPES[state.cardType];
+                    const providedTypes = value.split(',').map(t => t.trim()).filter(t => t);
+
+                    const invalidTypes = providedTypes.filter(t => !validTypes.includes(t));
+                    if (invalidTypes.length > 0) {
+                        alert(`Invalid transaction types: ${invalidTypes.join(', ')}. Valid types for ${CARD_TYPE_LABELS[state.cardType]}: ${validTypes.join(', ')}`);
+                        return;
+                    }
+
+                    // Check for duplicates
+                    if (hasDuplicateValues(value)) {
+                        alert(`Duplicate transaction types found: ${getDuplicateValues(value)}. Each type must be unique.`);
+                        return;
+                    }
+                }
+
+                control[field] = value;
+            } else {
+                control[field] = value;
+            }
+
+            validateCustomControls();
+            validateState();
+            render();
+        }
+
+        function updateDaySelection(controlIndex, customControlIndex, day, isChecked) {
+            const control = state.spendControls[controlIndex].customControls[customControlIndex];
+            let days = control.controlValue ? control.controlValue.split(',') : [];
+
+            if (isChecked && !days.includes(day)) {
+                days.push(day);
+            } else if (!isChecked) {
+                days = days.filter(d => d !== day);
+            }
+
+            // Check if days array is empty after change
+            if (days.length === 0) {
+                alert('At least one day must be selected.');
+                return;
+            }
+
+            days.sort((a, b) => DAYS_OF_WEEK.indexOf(a) - DAYS_OF_WEEK.indexOf(b));
+            control.controlValue = days.join(',');
+
+            render();
+        }
+
+        function updateTransactionTypeSelection(controlIndex, customControlIndex, type, isChecked) {
+            const control = state.spendControls[controlIndex].customControls[customControlIndex];
+            let types = control.controlValue ? control.controlValue.split(',') : [];
+
+            if (isChecked && !types.includes(type)) {
+                types.push(type);
+            } else if (!isChecked) {
+                types = types.filter(t => t !== type);
+            }
+
+            // Check if types array is empty after change
+            if (types.length === 0) {
+                alert('At least one transaction type must be selected.');
+                return;
+            }
+
+            control.controlValue = types.join(',');
+            render();
+        }
+
+        function updateTimeRange(controlIndex, customControlIndex, part, value) {
+            const control = state.spendControls[controlIndex].customControls[customControlIndex];
+            const [start, end] = control.controlValue ? control.controlValue.split('-') : ['00:00', '23:59'];
+
+            if (part === 'start') {
+                control.controlValue = `${value}-${end}`;
+            } else {
+                control.controlValue = `${start}-${value}`;
+            }
+
+            render();
+        }
+
+        function deleteCustomControl(controlIndex, customControlIndex) {
+            state.spendControls[controlIndex].customControls.splice(customControlIndex, 1);
+            validateCustomControls();
+            render();
+        }
+
+        function validateState() {
+            state.errors = new Map();
+
+            state.spendControls.forEach((control, index) => {
+                const isConditional = !!control.conditions;
+
+                // Validate name (1-50 characters)
+                if (!control.name.trim()) {
+                    state.errors.set(`control-${index}-name`, 'Name is required');
+                } else if (control.name.length > 50) {
+                    state.errors.set(`control-${index}-name`, 'Name must be 50 characters or less');
+                }
+
+                // Validate description (max 200 characters)
+                if (control.description && control.description.length > 200) {
+                    state.errors.set(`control-${index}-description`, 'Description must be 200 characters or less');
+                }
+
+                // Validate conditions
+                if (isConditional) {
+                    if (!control.conditions.length) {
+                        state.errors.set(`control-${index}-conditions`, 'At least one condition is required');
+                    } else {
+                        control.conditions.forEach((condition, condIndex) => {
+                            if (!condition.conditionValue.trim()) {
+                                state.errors.set(`control-${index}-condition-${condIndex}`, 'Condition value cannot be blank');
+                            }
+                        });
+                    }
+                }
+
+                // Validate singleTransactionAmountLimit
+                if (control.singleTransactionAmountLimit !== null) {
+                    if (control.singleTransactionAmountLimit < 0.01) {
+                        state.errors.set(`control-${index}-single-tx-amount`, 'Single transaction amount must be at least $0.01');
+                    }
+
+                    // For LIFETIME with transaction count = 1, singleTransactionAmount should match amountLimit
+                    const lifetimeLimit = control.cumulativeLimits.find(l => l.period === 'LIFETIME');
+                    if (lifetimeLimit && lifetimeLimit.transactionCount === 1 &&
+                        lifetimeLimit.amountLimit !== control.singleTransactionAmountLimit) {
+                        state.errors.set(`control-${index}-single-tx-match`,
+                            'For LIFETIME with transaction count = 1, single transaction amount must match amount limit');
+                    }
+                }
+
+                // Validate cumulative limits
+                control.cumulativeLimits.forEach((limit, limitIndex) => {
+                    // Validate positive amounts
+                    if (limit.amountLimit !== undefined && limit.amountLimit <= 0) {
+                        state.errors.set(`control-${index}-limit-${limitIndex}-amount`, 'Amount must be greater than zero');
+                    }
+
+                    if (limit.period === 'LIFETIME' && limit.transactionCount === 1) {
+                        if (control.singleTransactionAmountLimit === null) {
+                            state.errors.set(`control-${index}-lifetime-single-required`,
+                                'Single transaction limit is required when LIFETIME period has transaction count = 1');
+                        } else if (limit.amountLimit !== control.singleTransactionAmountLimit) {
+                            state.errors.set(`control-${index}-single-tx-match`,
+                                'For LIFETIME with transaction count = 1, single transaction amount must match amount limit');
+                        }
+                    }
+
+                    // Validate transaction count
+                    if (limit.transactionCount !== undefined) {
+                        if (limit.transactionCount <= 0) {
+                            state.errors.set(`control-${index}-limit-${limitIndex}-count`, 'Transaction count must be greater than zero');
+                        }
+
+                        // For LIFETIME period, transaction count can be at most 1
+                        if (limit.period === 'LIFETIME' && limit.transactionCount > 1) {
+                            state.errors.set(`control-${index}-limit-${limitIndex}-count`, 'LIFETIME period can have at most 1 transaction');
+                        }
+                    }
+
+                    // Validate custom period settings
+                    if (limit.period === 'CUSTOM') {
+                        if (!limit.customBeginDate) {
+                            state.errors.set(`control-${index}-limit-${limitIndex}-start`, 'Start date is required for custom period');
+                        } else {
+                            // Check if date is not in the past
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            const beginDate = new Date(limit.customBeginDate);
+
+                            if (beginDate < today) {
+                                state.errors.set(`control-${index}-limit-${limitIndex}-start`, 'Start date cannot be in the past');
+                            }
+                        }
+
+                        if (!limit.customDaysCount || limit.customDaysCount < 1) {
+                            state.errors.set(`control-${index}-limit-${limitIndex}-days`, 'Duration must be at least 1 day');
+                        }
+                    }
+                });
+
+                // Validate custom controls with more specific messages
+                if (control.customControls) {
+                    control.customControls.forEach((customControl, customIndex) => {
+                        // More specific error message including the control type
+                        if (!customControl.controlValue || customControl.controlValue.trim() === '') {
+                            state.errors.set(`control-${index}-customControl-${customIndex}-value`,
+                                `${customControl.controlType} control value cannot be blank`);
+                        }
+
+                        // Fixed duplicate detection logic
+                        if (customControl.controlValue && customControl.controlValue.trim() !== '') {
+                            const values = customControl.controlValue.split(',').map(v => v.trim()).filter(v => v);
+                            const uniqueValues = new Set(values);
+
+                            if (values.length !== uniqueValues.size) {
+                                // Find duplicate values for better error message
+                                const duplicates = [];
+                                const seen = new Set();
+
+                                for (const val of values) {
+                                    if (seen.has(val)) {
+                                        duplicates.push(val);
+                                    } else {
+                                        seen.add(val);
+                                    }
+                                }
+
+                                state.errors.set(`control-${index}-customControl-${customIndex}-duplicates`,
+                                    `Duplicate values found in ${customControl.controlType}: ${duplicates.join(', ')}`);
+                            }
+                        }
+
+                        // Transaction type validation
+                        if (customControl.controlType === 'TRANSACTION_TYPE' && customControl.controlValue) {
+                            const validTypes = TRANSACTION_TYPES[state.cardType];
+                            const providedTypes = customControl.controlValue.split(',').map(t => t.trim()).filter(t => t);
+
+                            const invalidTypes = providedTypes.filter(t => !validTypes.includes(t));
+                            if (invalidTypes.length > 0) {
+                                state.errors.set(`control-${index}-customControl-${customIndex}-invalid-types`,
+                                    `Invalid transaction types for ${CARD_TYPE_LABELS[state.cardType]}: ${invalidTypes.join(', ')}. Valid types: ${validTypes.join(', ')}`);
+                            }
+                        }
+                    });
+                }
+            });
+
+            return state.errors.size === 0;
+        }
+
+        function validateCustomControls() {
+            state.warnings = new Map();
+
+            state.spendControls.forEach((control, controlIndex) => {
+                if (!control.customControls) return;
+
+                // Individual cards can only have CURRENCY in custom controls
+                if (state.cardType === CARD_TYPES.INDIVIDUAL) {
+                    control.customControls.forEach((customControl, index) => {
+                        if (customControl.controlType !== 'CURRENCY') {
+                            state.warnings.set(`control-${controlIndex}-customControl-${index}`,
+                                'Individual cards only support CURRENCY custom controls');
+                        }
+                    });
+                }
+
+                // Virtual cards don't support CURRENCY or DISALLOW
+                if (state.cardType === CARD_TYPES.VIRTUAL) {
+                    control.customControls.forEach((customControl, index) => {
+                        if (customControl.controlType === 'CURRENCY') {
+                            state.warnings.set(`control-${controlIndex}-customControl-${index}`,
+                                'Virtual cards do not support CURRENCY custom controls');
+                        }
+
+                        if (customControl.controlValueOperator === 'DISALLOW') {
+                            state.warnings.set(`control-${controlIndex}-customControl-${index}`,
+                                'Virtual cards do not support the DISALLOW operator');
+                        }
+                    });
+                }
+
+                // Validate country codes and other control types
+                control.customControls.forEach((customControl, index) => {
+                    // Skip validation for blank values as they'll be caught in validateState
+                    if (!customControl.controlValue || customControl.controlValue.trim() === '') {
+                        return;
+                    }
+
+                    if (customControl.controlType === 'COUNTRY' && customControl.controlValue) {
+                        const countryValues = customControl.controlValue.split(',').map(c => c.trim()).filter(c => c);
+                        const invalidCodes = countryValues.filter(code => !/^[A-Z]{2}$/.test(code));
+
+                        if (invalidCodes.length > 0) {
+                            state.warnings.set(`control-${controlIndex}-customControl-${index}`,
+                                `Country codes must be 2-letter codes (invalid: ${invalidCodes.join(', ')})`);
+                        }
+                    }
+
+                    // Validate country subdivision format (XX-YY)
+                    if (customControl.controlType === 'COUNTRY_SUBDIVISION' && customControl.controlValue) {
+                        const subdivValues = customControl.controlValue.split(',').map(s => s.trim()).filter(s => s);
+                        const invalidSubdivs = subdivValues.filter(subdiv => !/^[A-Z]{2,3}-[A-Z0-9]{2,3}$/.test(subdiv));
+
+                        if (invalidSubdivs.length > 0) {
+                            state.warnings.set(`control-${controlIndex}-customControl-${index}`,
+                                `Country subdivisions must be in format XX-YY (invalid: ${invalidSubdivs.join(', ')})`);
+                        }
+                    }
+
+                    // Transaction types warning (separate from the error in validateState)
+                    if (customControl.controlType === 'TRANSACTION_TYPE' && customControl.controlValue) {
+                        const validTypes = TRANSACTION_TYPES[state.cardType];
+                        const providedTypes = customControl.controlValue.split(',').map(t => t.trim()).filter(t => t);
+
+                        const invalidTypes = providedTypes.filter(t => !validTypes.includes(t));
+                        if (invalidTypes.length > 0) {
+                            state.warnings.set(`control-${controlIndex}-customControl-${index}`,
+                                `Invalid transaction types: ${invalidTypes.join(', ')}. Valid types for ${CARD_TYPE_LABELS[state.cardType]}: ${validTypes.join(', ')}`);
+                        }
+                    }
+                });
+            });
+
+            return state.warnings.size === 0;
+        }
+        function addTooltip(text) {
+            return `
+                <div class="tooltip">
+                    <span>ℹ️</span>
+                    <span class="tooltip-text">${text}</span>
+                </div>
+            `;
+        }
+
+        function showError(error) {
+            return `<div class="error-message">${error}</div>`;
+        }
+
+        function showWarning(warning) {
+            return `<div class="warning-message">${warning}</div>`;
+        }
+
+        function showInfo(info) {
+            return `<div class="info-message">${info}</div>`;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toISOString().split('T')[0];
+        }
+
+        function generateCardTypeSelector() {
+            const hasConditionalControls = state.spendControls.some(control => control.conditions);
+            const warningMessage = state.cardType === CARD_TYPES.INDIVIDUAL && hasConditionalControls ?
+                showWarning('Changing to Virtual Card will remove all conditional spend controls!') : '';
+
+            return `
+                <div class="section">
+                    <h3 style="margin-top: 0;">Card Type</h3>
+                    <div class="card-type-selector">
+                        <div 
+                            class="card-type-option ${state.cardType === CARD_TYPES.VIRTUAL ? 'selected' : ''}"
+                            onclick="changeCardType('${CARD_TYPES.VIRTUAL}')"
+                        >
+                            <h4 style="margin-top: 0;">${CARD_TYPE_LABELS[CARD_TYPES.VIRTUAL]}</h4>
+                            <div class="card-type-description">Declining Balance</div>
+                        </div>
+                        <div 
+                            class="card-type-option ${state.cardType === CARD_TYPES.INDIVIDUAL ? 'selected' : ''}"
+                            onclick="changeCardType('${CARD_TYPES.INDIVIDUAL}')"
+                        >
+                            <h4 style="margin-top: 0;">${CARD_TYPE_LABELS[CARD_TYPES.INDIVIDUAL]}</h4>
+                            <div class="card-type-description">Refreshing Balance</div>
+                        </div>
+                    </div>
+                    ${warningMessage}
+                    <div class="info-message" style="margin-top: 0.5rem;">
+                        ${state.cardType === CARD_TYPES.VIRTUAL ?
+                    'Virtual cards support WEEKLY and LIFETIME periods but not CYCLE. Only base spend controls are allowed. The LIFETIME amount represents the credit limit.' :
+                    'Individual cards support CYCLE period but not WEEKLY or LIFETIME. Both base and conditional spend controls are available. The CYCLE amount represents the credit limit.'}
+                    </div>
+                </div>
+            `;
+        }
+
+        function generateSpendControlsList() {
+            const baseControls = state.spendControls.filter(control => !control.conditions);
+            const conditionalControls = state.spendControls.filter(control => control.conditions);
+
+            const baseControlsHtml = baseControls.map((control, index) => {
+                const controlIndex = state.spendControls.indexOf(control);
+                return generateSpendControlSection(control, controlIndex, false);
+            }).join('');
+
+            const conditionalControlsHtml = conditionalControls.map((control, index) => {
+                const controlIndex = state.spendControls.indexOf(control);
+                return generateSpendControlSection(control, controlIndex, true);
+            }).join('');
+
+            const canAddBaseControl = baseControls.length === 0;
+            const canAddConditionalControl = state.cardType === CARD_TYPES.INDIVIDUAL && baseControls.length > 0;
+
+            // Check if base control has LIFETIME period (can't add conditionals)
+            const baseHasLifetime = baseControls.length > 0 &&
+                baseControls[0].cumulativeLimits.some(limit => limit.period === 'LIFETIME');
+
+            return `
+                <div class="controls-list">
+                    <div class="section-header">
+                        <h3 style="margin: 0;">
+                            Base Spend Control
+                            ${addTooltip(HELP_TEXTS.baseControl)}
+                        </h3>
+                        ${canAddBaseControl ?
+                    `<button class="btn" onclick="addSpendControl(false)">Create Base Control</button>` :
+                    ''
+                }
+                    </div>
+                    
+                    ${baseControls.length === 0 ?
+                    `<div class="info-message">Every card must have a base spend control. This control applies to all transactions.</div>` :
+                    baseControlsHtml
+                }
+                    
+                    ${state.cardType === CARD_TYPES.INDIVIDUAL ? `
+                        <div class="section-header" style="margin-top: 1.5rem;">
+                            <h3 style="margin: 0;">
+                                Conditional Spend Controls
+                                ${addTooltip(HELP_TEXTS.conditionalControl)}
+                            </h3>
+                            ${!canAddBaseControl ?
+                        baseHasLifetime ?
+                            `<button class="btn btn-disabled" disabled>Not Available with LIFETIME Period</button>` :
+                            `<button class="btn btn-secondary" onclick="addSpendControl(true)">Add Conditional Control</button>` :
+                        `<button class="btn btn-disabled" disabled>Create Base Control First</button>`
+                    }
+                        </div>
+                        
+                        ${conditionalControls.length === 0 ?
+                        `<div class="info-message">Conditional spend controls apply when specific conditions are met. These are optional and only available for individual cards.</div>` :
+                        conditionalControlsHtml
+                    }
+                        ${baseHasLifetime && baseControls.length > 0 ?
+                        `<div class="warning-message">Conditional controls cannot be added when the base control includes a LIFETIME period.</div>` :
+                        ''
+                    }
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function generateSpendControlSection(control, index, isConditional) {
+            const sectionClass = isConditional ? 'conditional-control-section' : 'base-control-section';
+            const badgeClass = isConditional ? 'conditional-control-badge' : 'base-control-badge';
+            const badgeText = isConditional ? 'CONDITIONAL' : 'BASE';
+
+            return `
+                <div class="${sectionClass}">
+                    <div class="control-header">
+                        <h3 style="margin: 0;">
+                            <span class="control-type-badge ${badgeClass}">${badgeText}</span>
+                            ${control.name || `Unnamed ${isConditional ? 'Conditional' : 'Base'} Control`}
+                        </h3>
+                        <button class="btn btn-danger" onclick="deleteSpendControl(${index})">Delete</button>
+                    </div>
+                    
+                    ${generateBasicInfoSection(control, index)}
+                    ${isConditional ? generateConditionsSection(control, index) : ''}
+                    ${generateCumulativeLimitsSection(control, index, isConditional)}
+                    ${generateSingleTransactionSection(control, index)}
+                    ${!isConditional ? generateCustomControlsSection(control, index) : ''}
+                </div>
+            `;
+        }
+
+        function generateBasicInfoSection(control, index) {
+            return `
+                <div class="section">
+                    <h3 style="margin-top: 0;">Basic Information</h3>
+                    <div class="form-group">
+                        <label class="form-label">
+                            Name
+                            ${addTooltip(HELP_TEXTS.name)}
+                        </label>
+                        <input 
+                            type="text" 
+                            class="form-control ${state.errors.has(`control-${index}-name`) ? 'has-error' : ''}"
+                            value="${control.name}"
+                            onchange="updateControlBasicInfo(${index}, 'name', this.value)"
+                            placeholder="Enter control name (1-50 characters)"
+                            maxlength="50"
+                        >
+                        ${state.errors.has(`control-${index}-name`) ? showError(state.errors.get(`control-${index}-name`)) : ''}
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">
+                            Description
+                            ${addTooltip(HELP_TEXTS.description)}
+                        </label>
+                        <textarea 
+                            class="form-control ${state.errors.has(`control-${index}-description`) ? 'has-error' : ''}"
+                            onchange="updateControlBasicInfo(${index}, 'description', this.value)"
+                            placeholder="Enter detailed description (optional, max 200 characters)"
+                            rows="2"
+                            maxlength="200"
+                        >${control.description}</textarea>
+                        ${state.errors.has(`control-${index}-description`) ? showError(state.errors.get(`control-${index}-description`)) : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Also, update the condition display to prevent changing to duplicate types
+        function generateConditionsSection(control, index) {
+            return `
+        <div class="section">
+            <div class="section-header">
+                <h3 style="margin: 0;">
+                    Conditions
+                    ${addTooltip(HELP_TEXTS.conditions)}
+                </h3>
+                <button class="btn" onclick="addCondition(${index})">Add Condition</button>
+            </div>
+            ${control.conditions.length === 0 ?
+                    `<div class="error-message">Conditional spend controls must have at least one condition.</div>` :
+                    control.conditions.map((condition, condIndex) => {
+                        // Get available condition types for this dropdown
+                        const usedTypes = new Set(
+                            control.conditions
+                                .filter(c => c !== condition)
+                                .map(c => c.conditionType)
+                        );
+
+                        const availableTypes = Object.entries(CONDITION_TYPES).filter(([_, value]) =>
+                            value === condition.conditionType || !usedTypes.has(value)
+                        );
+
+                        return `
+                        <div class="row">
+                            <select 
+                                class="form-control"
+                                onchange="updateCondition(${index}, ${condIndex}, 'conditionType', this.value)"
+                            >
+                                ${availableTypes.map(([key, value]) => `
+                                    <option value="${value}" ${condition.conditionType === value ? 'selected' : ''}>
+                                        ${key}
+                                    </option>
+                                `).join('')}
+                            </select>
+                            <input 
+                                type="text"
+                                class="form-control ${state.errors.has(`control-${index}-condition-${condIndex}`) ? 'has-error' : ''}"
+                                value="${condition.conditionValue || ''}"
+                                placeholder="e.g., RETAIL, TRAVEL"
+                                onchange="updateCondition(${index}, ${condIndex}, 'conditionValue', this.value)"
+                            >
+                            <select 
+                                class="form-control"
+                                onchange="updateCondition(${index}, ${condIndex}, 'conditionValueOperator', this.value)"
+                            >
+                                <option value="EQUAL" ${condition.conditionValueOperator === 'EQUAL' ? 'selected' : ''}>Equal</option>
+                                <option value="NOT_EQUAL" ${condition.conditionValueOperator === 'NOT_EQUAL' ? 'selected' : ''}>Not Equal</option>
+                            </select>
+                            <button class="delete-btn" onclick="deleteCondition(${index}, ${condIndex})">×</button>
+                        </div>
+                        ${state.errors.has(`control-${index}-condition-${condIndex}`) ?
+                                showError(state.errors.get(`control-${index}-condition-${condIndex}`)) : ''}
+                    `;
+                    }).join('')
+                }
+        </div>
+    `;
+        }
+
+        function generateCumulativeLimitsSection(control, index, isConditional) {
+            // Check if this control has a special field for being a credit limit
+            const isCreditLimitField = (limit) => {
+                if (state.cardType === CARD_TYPES.VIRTUAL && limit.period === 'LIFETIME') {
+                    return true;
+                }
+                if (state.cardType === CARD_TYPES.INDIVIDUAL && limit.period === 'CYCLE') {
+                    return true;
+                }
+                return false;
+            };
+
+            return `
+                <div class="section">
+                    <div class="section-header">
+                        <h3 style="margin: 0;">
+                            Cumulative Limits
+                            ${addTooltip(HELP_TEXTS.cumulativeLimits)}
+                        </h3>
+                        <button class="btn" onclick="addCumulativeLimit(${index})">Add Limit</button>
+                    </div>
+                    ${control.cumulativeLimits.length === 0 ?
+                    '<p style="color: #6b7280; font-style: italic;">No spending limits added.</p>' :
+                    control.cumulativeLimits.map((limit, limitIndex) => `
+                            <div class="limit-row">
+                                <div class="form-group">
+                                    <label class="form-label">Period</label>
+                                    <select 
+                                        class="form-control"
+                                        onchange="updateCumulativeLimit(${index}, ${limitIndex}, 'period', this.value)"
+                                    >
+                                        ${getAvailablePeriodsForControl(control, limit.period).map(period => `
+                                            <option value="${period}" ${limit.period === period ? 'selected' : ''}>
+                                                ${period}${isCreditLimitField({ period }) ? ' (Credit Limit)' : ''}
+                                            </option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">
+                                        Amount Limit ($)
+                                    </label>
+                                    <input 
+                                        type="number"
+                                        class="form-control ${state.errors.has(`control-${index}-limit-${limitIndex}-amount`) ? 'has-error' : ''}"
+                                        value="${limit.amountLimit !== undefined ? limit.amountLimit : ''}"
+                                        placeholder="Maximum amount"
+                                        onchange="updateCumulativeLimit(${index}, ${limitIndex}, 'amountLimit', this.value)"
+                                        min="0.01"
+                                        step="0.01"
+                                    >
+                                    ${state.errors.has(`control-${index}-limit-${limitIndex}-amount`) ?
+                            showError(state.errors.get(`control-${index}-limit-${limitIndex}-amount`)) : ''}
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Transaction Count</label>
+                                    <input 
+                                        type="number"
+                                        class="form-control ${state.errors.has(`control-${index}-limit-${limitIndex}-count`) ? 'has-error' : ''}"
+                                        value="${limit.transactionCount !== undefined ? limit.transactionCount : ''}"
+                                        placeholder="Max transactions"
+                                        onchange="updateCumulativeLimit(${index}, ${limitIndex}, 'transactionCount', this.value)"
+                                        min="1"
+                                        step="1"
+                                        ${limit.period === 'LIFETIME' ? 'max="1"' : ''}
+                                    >
+                                    ${state.errors.has(`control-${index}-limit-${limitIndex}-count`) ?
+                            showError(state.errors.get(`control-${index}-limit-${limitIndex}-count`)) : ''}
+                                </div>
+                                <button class="delete-btn" style="align-self: end; margin-bottom: 0.5rem;" 
+                                    onclick="deleteCumulativeLimit(${index}, ${limitIndex})">×</button>
+                                
+                                ${limit.period === 'CUSTOM' ? `
+                                    <div class="custom-period-fields">
+                                        <div class="form-group">
+                                            <label class="form-label">Start Date</label>
+                                            <input 
+                                                type="date"
+                                                class="form-control ${state.errors.has(`control-${index}-limit-${limitIndex}-start`) ? 'has-error' : ''}"
+                                                value="${limit.customBeginDate ? formatDate(limit.customBeginDate) : ''}"
+                                                onchange="updateCumulativeLimit(${index}, ${limitIndex}, 'customBeginDate', this.value)"
+                                                min="${formatDate(new Date())}"
+                                            >
+                                            ${state.errors.has(`control-${index}-limit-${limitIndex}-start`) ?
+                                showError(state.errors.get(`control-${index}-limit-${limitIndex}-start`)) : ''}
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Duration (Days)</label>
+                                            <input 
+                                                type="number"
+                                                class="form-control ${state.errors.has(`control-${index}-limit-${limitIndex}-days`) ? 'has-error' : ''}"
+                                                value="${limit.customDaysCount !== undefined ? limit.customDaysCount : ''}"
+                                                placeholder="Number of days"
+                                                onchange="updateCumulativeLimit(${index}, ${limitIndex}, 'customDaysCount', this.value)"
+                                                min="1"
+                                                step="1"
+                                            >
+                                            ${state.errors.has(`control-${index}-limit-${limitIndex}-days`) ?
+                                showError(state.errors.get(`control-${index}-limit-${limitIndex}-days`)) : ''}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `).join('')
+                }
+                </div>
+            `;
+        }
+
+        function getAvailablePeriodsForControl(control, currentPeriod) {
+            const isConditional = !!control.conditions;
+            let availablePeriods;
+
+            if (state.cardType === CARD_TYPES.VIRTUAL) {
+                availablePeriods = [...PERIOD_TYPES[CARD_TYPES.VIRTUAL]];
+            } else {
+                availablePeriods = [...PERIOD_TYPES[CARD_TYPES.INDIVIDUAL]];
+            }
+
+            const usedPeriods = new Set(
+                control.cumulativeLimits
+                    .filter(limit => limit.period !== currentPeriod)
+                    .map(limit => limit.period)
+            );
+
+            return [currentPeriod, ...availablePeriods.filter(period => !usedPeriods.has(period))];
+        }
+
+        function generateSingleTransactionSection(control, index) {
+            return `
+                <div class="section">
+                    <div class="section-header">
+                        <h3 style="margin: 0;">
+                            Single Transaction Limit
+                            ${addTooltip(HELP_TEXTS.singleTransactionAmountLimit)}
+                        </h3>
+                        ${control.singleTransactionAmountLimit === null ?
+                    `<button class="btn" onclick="enableSingleTransactionLimit(${index})">Add Limit</button>` :
+                    ''
+                }
+                    </div>
+                    ${control.singleTransactionAmountLimit !== null ? `
+                        <div class="form-group">
+                            <label class="form-label">Maximum Amount ($)</label>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input 
+                                    type="number"
+                                    class="form-control ${state.errors.has(`control-${index}-single-tx-amount`) || state.errors.has(`control-${index}-single-tx-match`) ? 'has-error' : ''}"
+                                    value="${control.singleTransactionAmountLimit}"
+                                    onchange="updateSingleTransactionLimit(${index}, this.value)"
+                                    min="0.01"
+                                    step="0.01"
+                                >
+                                <button class="delete-btn" onclick="disableSingleTransactionLimit(${index})">×</button>
+                            </div>
+                            ${state.errors.has(`control-${index}-single-tx-amount`) ?
+                        showError(state.errors.get(`control-${index}-single-tx-amount`)) : ''}
+                            ${state.errors.has(`control-${index}-single-tx-match`) ?
+                        showError(state.errors.get(`control-${index}-single-tx-match`)) : ''}
+                        </div>
+                    ` :
+                    '<p style="color: #6b7280; font-style: italic;">No single transaction limit set.</p>'}
+                </div>
+            `;
+        }
+
+        function generateCustomControlsSection(control, index) {
+            if (control.conditions) return '';
+
+            // For individual cards, only show CURRENCY control type
+            const isIndividualCard = state.cardType === CARD_TYPES.INDIVIDUAL;
+            const isVirtualCard = state.cardType === CARD_TYPES.VIRTUAL;
+
+            return `
+                <div class="section">
+                    <div class="section-header">
+                        <h3 style="margin: 0;">
+                            Custom Controls
+                            ${addTooltip(HELP_TEXTS.customControls)}
+                        </h3>
+                        <button class="btn" onclick="addCustomControl(${index})">Add Control</button>
+                    </div>
+                    ${isIndividualCard ?
+                    `<div class="info-message">Note: Individual cards only support CURRENCY for custom controls.</div>` : ''}
+                    ${isVirtualCard ?
+                    `<div class="info-message">Note: Virtual cards do not support CURRENCY for custom controls.</div>` : ''}
+                    ${!control.customControls || control.customControls.length === 0 ?
+                    '<p style="color: #6b7280; font-style: italic;">No custom controls added.</p>' :
+                    control.customControls.map((customControl, customIndex) => `
+                            <div class="row">
+                                <select 
+                                    class="form-control ${state.warnings.has(`control-${index}-customControl-${customIndex}`) ? 'has-error' : ''}"
+                                    onchange="updateCustomControl(${index}, ${customIndex}, 'controlType', this.value)"
+                                    ${isIndividualCard ? 'disabled' : ''}
+                                >
+                                    ${getAvailableControlTypesForSelect(control, customControl).map(([key, value]) => {
+                        const isDisabled = (isIndividualCard && value !== 'CURRENCY') ||
+                            (isVirtualCard && value === 'CURRENCY');
+                        return `
+                                            <option 
+                                                value="${value}" 
+                                                ${customControl.controlType === value ? 'selected' : ''}
+                                                ${isDisabled ? 'disabled' : ''}
+                                            >
+                                                ${key}${isDisabled ? (isIndividualCard ? ' (Not for Individual)' : ' (Not for Virtual)') : ''}
+                                            </option>
+                                        `;
+                    }).join('')}
+                                </select>
+                                ${generateControlValueInput(customControl, index, customIndex)}
+                                <select 
+                                    class="form-control"
+                                    onchange="updateCustomControl(${index}, ${customIndex}, 'controlValueOperator', this.value)"
+                                >
+                                    <option value="ALLOW" ${customControl.controlValueOperator === 'ALLOW' ? 'selected' : ''}>Allow</option>
+                                    <option value="DISALLOW" ${customControl.controlValueOperator === 'DISALLOW' ? 'selected' : ''}
+                                        ${state.cardType === CARD_TYPES.VIRTUAL ? 'disabled' : ''}>
+                                        Disallow${state.cardType === CARD_TYPES.VIRTUAL ? ' (Not for Virtual)' : ''}
+                                    </option>
+                                </select>
+                                <button class="delete-btn" onclick="deleteCustomControl(${index}, ${customIndex})">×</button>
+                            </div>
+                            ${state.errors.has(`control-${index}-customControl-${customIndex}-value`) ?
+                            showError(state.errors.get(`control-${index}-customControl-${customIndex}-value`)) : ''}
+                            ${state.errors.has(`control-${index}-customControl-${customIndex}-duplicates`) ?
+                            showError(state.errors.get(`control-${index}-customControl-${customIndex}-duplicates`)) : ''}
+                            ${state.errors.has(`control-${index}-customControl-${customIndex}-invalid-types`) ?
+                            showError(state.errors.get(`control-${index}-customControl-${customIndex}-invalid-types`)) : ''}
+                            ${state.warnings.has(`control-${index}-customControl-${customIndex}`) ?
+                            showWarning(state.warnings.get(`control-${index}-customControl-${customIndex}`)) : ''}
+                            ${state.warnings.has(`control-${index}-customControl-${customIndex}-duplicates`) ?
+                            showWarning(state.warnings.get(`control-${index}-customControl-${customIndex}-duplicates`)) : ''}
+                        `).join('')
+                }
+                </div>
+            `;
+        }
+
+        function getAvailableControlTypesForSelect(control, currentControl) {
+            const usedTypes = new Set(
+                control.customControls
+                    .filter(c => c !== currentControl)
+                    .map(c => c.controlType)
+            );
+
+            // For individual cards, only show CURRENCY
+            if (state.cardType === CARD_TYPES.INDIVIDUAL) {
+                return Object.entries(CONTROL_TYPES).filter(([_, value]) => value === 'CURRENCY');
+            }
+
+            // For virtual cards, don't show CURRENCY
+            if (state.cardType === CARD_TYPES.VIRTUAL) {
+                return Object.entries(CONTROL_TYPES).filter(([_, value]) => {
+                    return value !== 'CURRENCY' && (value === currentControl.controlType || !usedTypes.has(value));
+                });
+            }
+
+            return Object.entries(CONTROL_TYPES).filter(([_, value]) => {
+                return value === currentControl.controlType || !usedTypes.has(value);
+            });
+        }
+
+        function generateControlValueInput(control, controlIndex, customControlIndex) {
+            switch (control.controlType) {
+                case 'DAY_OF_WEEK':
+                    const selectedDays = control.controlValue ? control.controlValue.split(',') : [];
+                    return `
+                <div class="checkbox-group">
+                    ${DAYS_OF_WEEK.map(day => `
+                        <label class="checkbox-label">
+                            <input 
+                                type="checkbox"
+                                ${selectedDays.includes(day) ? 'checked' : ''}
+                                onchange="updateDaySelection(${controlIndex}, ${customControlIndex}, '${day}', this.checked)"
+                            />
+                            ${day.slice(0, 3)}
+                        </label>
+                    `).join('')}
+                </div>
+            `;
+
+                case 'TRANSACTION_TYPE':
+                    const selectedTypes = control.controlValue ? control.controlValue.split(',') : [];
+                    // Get the correct transaction types for the current card type
+                    const availableTypes = TRANSACTION_TYPES[state.cardType];
+
+                    return `
+                <div class="checkbox-group">
+                    ${availableTypes.map(type => `
+                        <label class="checkbox-label">
+                            <input 
+                                type="checkbox"
+                                ${selectedTypes.includes(type) ? 'checked' : ''}
+                                onchange="updateTransactionTypeSelection(${controlIndex}, ${customControlIndex}, '${type}', this.checked)"
+                            />
+                            ${type}
+                        </label>
+                    `).join('')}
+                </div>
+            `;
+
+                case 'TIME_OF_DAY':
+                    const [startTime, endTime] = (control.controlValue || '00:00-23:59').split('-');
+                    return `
+                <div class="time-range">
+                    <input 
+                        type="time"
+                        class="form-control"
+                        value="${startTime}"
+                        onchange="updateTimeRange(${controlIndex}, ${customControlIndex}, 'start', this.value)"
+                    />
+                    <span>to</span>
+                    <input 
+                        type="time"
+                        class="form-control"
+                        value="${endTime}"
+                        onchange="updateTimeRange(${controlIndex}, ${customControlIndex}, 'end', this.value)"
+                    />
+                </div>
+            `;
+
+                case 'MCC':
+                    return `
+                <input 
+                    type="text"
+                    class="form-control ${state.errors.has(`control-${controlIndex}-customControl-${customControlIndex}-value`) ? 'has-error' : ''}"
+                    value="${control.controlValue || ''}"
+                    placeholder="e.g., 3000,4000,5000-6000"
+                    onchange="updateCustomControl(${controlIndex}, ${customControlIndex}, 'controlValue', this.value)"
+                >
+            `;
+
+                case 'COUNTRY':
+                    return `
+                <input 
+                    type="text"
+                    class="form-control ${state.warnings.has(`control-${controlIndex}-customControl-${customControlIndex}`) ||
+                            state.errors.has(`control-${controlIndex}-customControl-${customControlIndex}-value`) ? 'has-error' : ''}"
+                    value="${control.controlValue || ''}"
+                    placeholder="e.g., US,CA,GB (2-letter codes)"
+                    onchange="updateCustomControl(${controlIndex}, ${customControlIndex}, 'controlValue', this.value.toUpperCase())"
+                >
+            `;
+
+                case 'COUNTRY_SUBDIVISION':
+                    return `
+                <input 
+                    type="text"
+                    class="form-control ${state.warnings.has(`control-${controlIndex}-customControl-${customControlIndex}`) ||
+                            state.errors.has(`control-${controlIndex}-customControl-${customControlIndex}-value`) ? 'has-error' : ''}"
+                    value="${control.controlValue || ''}"
+                    placeholder="e.g., US-TX,CA-BC (format XX-YY)"
+                    onchange="updateCustomControl(${controlIndex}, ${customControlIndex}, 'controlValue', this.value.toUpperCase())"
+                >
+            `;
+
+                case 'CURRENCY':
+                    return `
+                <input 
+                    type="text"
+                    class="form-control ${state.errors.has(`control-${controlIndex}-customControl-${customControlIndex}-value`) ? 'has-error' : ''}"
+                    value="${control.controlValue || ''}"
+                    placeholder="e.g., USD,EUR,GBP"
+                    onchange="updateCustomControl(${controlIndex}, ${customControlIndex}, 'controlValue', this.value.toUpperCase())"
+                >
+            `;
+
+                default:
+                    return `
+                <input 
+                    type="text"
+                    class="form-control ${state.errors.has(`control-${controlIndex}-customControl-${customControlIndex}-value`) ? 'has-error' : ''}"
+                    value="${control.controlValue || ''}"
+                    placeholder="Enter value"
+                    onchange="updateCustomControl(${controlIndex}, ${customControlIndex}, 'controlValue', this.value)"
+                >
+            `;
+            }
+        }
+
+        function changeCardType(type) {
+            if (state.cardType === type) return;
+
+            if (type === CARD_TYPES.VIRTUAL && state.spendControls.some(control => control.conditions)) {
+                if (!confirm(`Changing to ${CARD_TYPE_LABELS[CARD_TYPES.VIRTUAL]} will remove all conditional spend controls. Continue?`)) {
+                    return;
+                }
+
+                state.spendControls = state.spendControls.filter(control => !control.conditions);
+            }
+
+            state.cardType = type;
+
+            state.spendControls.forEach(control => {
+                // Update periods based on card type
+                control.cumulativeLimits = control.cumulativeLimits.filter(limit => {
+                    if (type === CARD_TYPES.VIRTUAL && limit.period === 'CYCLE') {
+                        return false;
+                    }
+                    if (type === CARD_TYPES.INDIVIDUAL && (limit.period === 'LIFETIME' || limit.period === 'WEEKLY')) {
+                        return false;
+                    }
+                    return true;
+                });
+
+                // Update custom controls
+                if (control.customControls) {
+                    // Virtual cards don't support CURRENCY
+                    if (type === CARD_TYPES.VIRTUAL) {
+                        control.customControls = control.customControls.filter(c => c.controlType !== 'CURRENCY');
+
+                        // Update operators for Virtual cards - no DISALLOW
+                        control.customControls.forEach(c => {
+                            if (c.controlValueOperator === 'DISALLOW') {
+                                c.controlValueOperator = 'ALLOW';
+                            }
+                        });
+                    }
+
+                    // Individual cards only support CURRENCY
+                    if (type === CARD_TYPES.INDIVIDUAL) {
+                        const currencyControl = control.customControls.find(c => c.controlType === 'CURRENCY');
+
+                        // If a CURRENCY control exists, keep only that one
+                        if (currencyControl) {
+                            control.customControls = [currencyControl];
+                        } else {
+                            // Otherwise, remove all controls
+                            control.customControls = [];
+                        }
+                    }
+                }
+            });
+
+            validateCustomControls();
+            validateState();
+            render();
+        }
+
+        function generatePlainEnglishDescription() {
+            if (state.spendControls.length === 0) {
+                return 'Start by creating a spend control.';
+            }
+
+            let html = [];
+
+            html.push(`<div class="summary-section">`);
+            html.push(`<div class="summary-title">Spend Control Configuration for ${state.cardType === CARD_TYPES.VIRTUAL ? 'Virtual Card' : 'Individual Card'}</div>`);
+
+            const baseControls = state.spendControls.filter(control => !control.conditions);
+            const conditionalControls = state.spendControls.filter(control => control.conditions);
+
+            // Helper function to identify credit limit fields
+            const isCreditLimit = (limit) => {
+                if (state.cardType === CARD_TYPES.VIRTUAL && limit.period === 'LIFETIME') {
+                    return true;
+                }
+                if (state.cardType === CARD_TYPES.INDIVIDUAL && limit.period === 'CYCLE') {
+                    return true;
+                }
+                return false;
+            };
+
+            // Helper to check for single transaction exact authorization case
+            const hasSingleTransactionExactAuth = (control) => {
+                if (state.cardType !== CARD_TYPES.VIRTUAL) return false;
+
+                const lifetimeLimit = control.cumulativeLimits.find(l => l.period === 'LIFETIME');
+                if (!lifetimeLimit) return false;
+
+                return lifetimeLimit.transactionCount === 1 &&
+                    control.singleTransactionAmountLimit !== null &&
+                    lifetimeLimit.amountLimit === control.singleTransactionAmountLimit;
+            };
+
+            if (baseControls.length > 0) {
+                const baseControl = baseControls[0];
+                const hasExactAuth = hasSingleTransactionExactAuth(baseControl);
+
+                html.push(`<div class="summary-base">`);
+                html.push(`<div class="summary-subtitle">Base Spend Control (Applies to all transactions)</div>`);
+                html.push(`<div class="summary-rule-name">${baseControl.name || 'Unnamed Control'}</div>`);
+
+                if (baseControl.description) {
+                    html.push(`<p>${baseControl.description}</p>`);
+                }
+
+                if (hasExactAuth) {
+                    html.push(`<p><strong>Single Transaction Exact Authorization:</strong> This control is configured to allow exactly one transaction up to the credit limit amount of $${baseControl.singleTransactionAmountLimit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.</p>`);
+                }
+
+                if (baseControl.cumulativeLimits.length > 0) {
+                    html.push(`<div class="summary-subtitle">Spending Limits</div>`);
+                    html.push(`<p>This control enforces the following spending restrictions:</p>`);
+
+                    baseControl.cumulativeLimits.forEach(limit => {
+                        let limitDesc = '';
+
+                        const periodName = limit.period === 'CYCLE' && state.cardType === CARD_TYPES.INDIVIDUAL ?
+                            'CYCLE limit (Credit Limit)' :
+                            (limit.period === 'LIFETIME' && state.cardType === CARD_TYPES.VIRTUAL ?
+                                'LIFETIME limit (Credit Limit)' :
+                                `${limit.period} limit`);
+
+                        // Start with period name in bold
+                        limitDesc += `<span class="summary-highlight">${periodName}:</span> `;
+
+                        const hasAmount = limit.amountLimit !== undefined && limit.amountLimit > 0;
+                        const hasCount = limit.transactionCount !== undefined && limit.transactionCount > 0;
+
+                        // Construct a natural language description
+                        if (hasAmount && hasCount) {
+                            limitDesc += `Maximum of $${limit.amountLimit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} and ${limit.transactionCount} transactions`;
+                        } else if (hasAmount) {
+                            limitDesc += `Maximum of $${limit.amountLimit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                        } else if (hasCount) {
+                            limitDesc += `Maximum of ${limit.transactionCount} transactions`;
+                        }
+
+                        if (limit.period === 'CUSTOM') {
+                            limitDesc += ` over a ${limit.customDaysCount}-day period starting ${limit.customBeginDate ? new Date(limit.customBeginDate).toLocaleDateString() : 'on the specified date'
+                                }`;
+                        } else {
+                            // Add period context
+                            if (limit.period === 'DAILY') limitDesc += ' per day';
+                            else if (limit.period === 'WEEKLY') limitDesc += ' per week';
+                            else if (limit.period === 'MONTHLY') limitDesc += ' per month';
+                            else if (limit.period === 'QUARTERLY') limitDesc += ' per quarter';
+                            else if (limit.period === 'YEARLY') limitDesc += ' per year';
+                            // CYCLE and LIFETIME don't need extra context
+                        }
+
+                        html.push(`<p class="summary-list-item">• ${limitDesc}</p>`);
+                    });
+                }
+
+                if (baseControl.singleTransactionAmountLimit !== null && !hasExactAuth) {
+                    html.push(`<div class="summary-subtitle">Single Transaction Limit</div>`);
+                    html.push(`<p>Maximum amount per transaction: <span class="summary-highlight">$${baseControl.singleTransactionAmountLimit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>`);
+                }
+
+                if (baseControl.customControls && baseControl.customControls.length > 0) {
+                    html.push(`<div class="summary-subtitle">Authorization Controls</div>`);
+                    html.push(`<ul class="summary-list">`);
+
+                    baseControl.customControls.forEach(customControl => {
+                        const action = customControl.controlValueOperator === 'ALLOW' ? 'Allow' : 'Block';
+                        let controlDesc = `<span class="summary-highlight">${action}</span> `;
+
+                        switch (customControl.controlType) {
+                            case 'MCC':
+                                controlDesc += `merchant categories: ${customControl.controlValue || '(empty)'}`;
+                                break;
+                            case 'MCC_GROUP':
+                                controlDesc += `merchant category groups: ${customControl.controlValue || '(empty)'}`;
+                                break;
+                            case 'COUNTRY':
+                                controlDesc += `countries: ${customControl.controlValue || '(empty)'}`;
+                                break;
+                            case 'COUNTRY_SUBDIVISION':
+                                controlDesc += `country subdivisions: ${customControl.controlValue || '(empty)'}`;
+                                break;
+                            case 'CURRENCY':
+                                controlDesc += `currencies: ${customControl.controlValue || '(empty)'}`;
+                                break;
+                            case 'DAY_OF_WEEK':
+                                controlDesc += `days: ${customControl.controlValue || '(empty)'}`;
+                                break;
+                            case 'TIME_OF_DAY':
+                                controlDesc += `time range: ${customControl.controlValue || '(empty)'}`;
+                                break;
+                            case 'TRANSACTION_TYPE':
+                                controlDesc += `transaction types: ${customControl.controlValue || '(empty)'}`;
+                                break;
+                            default:
+                                controlDesc += `${customControl.controlType}: ${customControl.controlValue || '(empty)'}`;
+                        }
+
+                        html.push(`<li class="summary-list-item">${controlDesc}</li>`);
+                    });
+
+                    html.push(`</ul>`);
+                }
+                html.push(`</div>`);
+            }
+
+            if (conditionalControls.length > 0) {
+                html.push(`<div class="summary-subtitle">Conditional Spend Controls</div>`);
+                html.push(`<p>The following controls will only apply when their specific conditions are met:</p>`);
+
+                conditionalControls.forEach((conditionalControl, index) => {
+                    html.push(`<div class="summary-conditional">`);
+                    html.push(`<div class="summary-rule-name">${conditionalControl.name || `Conditional Control ${index + 1}`}</div>`);
+
+                    if (conditionalControl.description) {
+                        html.push(`<p>${conditionalControl.description}</p>`);
+                    }
+
+                    html.push(`<div class="summary-subtitle">Applies when:</div>`);
+                    html.push(`<ul class="summary-list">`);
+                    conditionalControl.conditions.forEach(condition => {
+                        const operator = condition.conditionValueOperator === 'EQUAL' ? 'is' : 'is not';
+                        html.push(`<li class="summary-list-item"><span class="summary-highlight">${condition.conditionType}</span> ${operator} ${condition.conditionValue || '(empty)'}</li>`);
+                    });
+                    html.push(`</ul>`);
+
+                    if (conditionalControl.cumulativeLimits.length > 0) {
+                        html.push(`<div class="summary-subtitle">Spending Limits</div>`);
+                        html.push(`<p>When conditions are met, the following limits apply:</p>`);
+
+                        conditionalControl.cumulativeLimits.forEach(limit => {
+                            let limitDesc = '';
+
+                            const periodName = limit.period === 'CYCLE' && state.cardType === CARD_TYPES.INDIVIDUAL ?
+                                'CYCLE limit (Credit Limit)' :
+                                (limit.period === 'LIFETIME' && state.cardType === CARD_TYPES.VIRTUAL ?
+                                    'LIFETIME limit (Credit Limit)' :
+                                    `${limit.period} limit`);
+
+                            // Start with period name in bold
+                            limitDesc += `<span class="summary-highlight">${periodName}:</span> `;
+
+                            const hasAmount = limit.amountLimit !== undefined && limit.amountLimit > 0;
+                            const hasCount = limit.transactionCount !== undefined && limit.transactionCount > 0;
+
+                            // Construct a natural language description
+                            if (hasAmount && hasCount) {
+                                limitDesc += `Maximum of $${limit.amountLimit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} and ${limit.transactionCount} transactions`;
+                            } else if (hasAmount) {
+                                limitDesc += `Maximum of $${limit.amountLimit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                            } else if (hasCount) {
+                                limitDesc += `Maximum of ${limit.transactionCount} transactions`;
+                            }
+
+                            if (limit.period === 'CUSTOM') {
+                                limitDesc += ` over a ${limit.customDaysCount}-day period starting ${limit.customBeginDate ? new Date(limit.customBeginDate).toLocaleDateString() : 'on the specified date'
+                                    }`;
+                            } else {
+                                // Add period context
+                                if (limit.period === 'DAILY') limitDesc += ' per day';
+                                else if (limit.period === 'WEEKLY') limitDesc += ' per week';
+                                else if (limit.period === 'MONTHLY') limitDesc += ' per month';
+                                else if (limit.period === 'QUARTERLY') limitDesc += ' per quarter';
+                                else if (limit.period === 'YEARLY') limitDesc += ' per year';
+                                // CYCLE and LIFETIME don't need extra context
+                            }
+
+                            html.push(`<p class="summary-list-item">• ${limitDesc}</p>`);
+                        });
+                    }
+
+                    if (conditionalControl.singleTransactionAmountLimit !== null) {
+                        html.push(`<div class="summary-subtitle">Single Transaction Limit</div>`);
+                        html.push(`<p>Maximum amount per transaction: <span class="summary-highlight">$${conditionalControl.singleTransactionAmountLimit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></p>`);
+                    }
+
+                    html.push(`</div>`);
+                });
+            }
+
+            html.push(`</div>`);
+
+            return html.join('');
+        }
+
+        function generateFinalJson() {
+            // Create a deep copy to avoid modifying the original state
+            const fixedControls = JSON.parse(JSON.stringify(state.spendControls));
+
+            // Filter out null/empty fields for each control
+            const cleanedControls = fixedControls.map(control => {
+                const cleanedControl = {};
+
+                // Include non-empty fields
+                if (control.name && control.name.trim()) cleanedControl.name = control.name.trim();
+                if (control.description && control.description.trim()) cleanedControl.description = control.description.trim();
+                if (control.singleTransactionAmountLimit !== null) {
+                    cleanedControl.singleTransactionAmountLimit = parseFloat(control.singleTransactionAmountLimit.toFixed(2));
+                }
+
+                // Fix conditions if they exist
+                if (control.conditions && control.conditions.length) {
+                    cleanedControl.conditions = control.conditions
+                        .filter(condition => condition.conditionValue && condition.conditionValue.trim())
+                        .map(condition => ({
+                            conditionType: condition.conditionType,
+                            conditionValue: condition.conditionValue.trim(),
+                            conditionValueOperator: condition.conditionValueOperator.toUpperCase()
+                        }));
+                }
+
+                // Handle cumulative limits
+                if (control.cumulativeLimits && control.cumulativeLimits.length) {
+                    cleanedControl.cumulativeLimits = control.cumulativeLimits.map(limit => {
+                        const cleanedLimit = {
+                            period: limit.period
+                        };
+
+                        if (limit.amountLimit !== undefined && limit.amountLimit > 0) {
+                            cleanedLimit.amountLimit = parseFloat(limit.amountLimit.toFixed(2));
+                        }
+
+                        if (limit.transactionCount !== undefined && limit.transactionCount > 0) {
+                            cleanedLimit.transactionCount = limit.transactionCount;
+                        }
+
+                        if (limit.period === 'CUSTOM') {
+                            if (limit.customBeginDate) cleanedLimit.customBeginDate = limit.customBeginDate;
+                            if (limit.customDaysCount) cleanedLimit.customDaysCount = limit.customDaysCount;
+                        }
+
+                        return cleanedLimit;
+                    });
+                }
+
+                // Handle custom controls
+                if (control.customControls && control.customControls.length) {
+                    cleanedControl.customControls = control.customControls
+                        .filter(customControl => customControl.controlValue && customControl.controlValue.trim())
+                        .map(customControl => ({
+                            controlType: customControl.controlType,
+                            controlValue: customControl.controlValue.trim(),
+                            controlValueOperator: customControl.controlValueOperator.toUpperCase()
+                        }));
+                }
+
+                return cleanedControl;
+            });
+
+            return JSON.stringify({ spendControls: cleanedControls }, null, 2);
+        }
+
+        function copyJsonToClipboard() {
+            navigator.clipboard.writeText(generateFinalJson()).then(() => {
+                alert('JSON copied to clipboard!');
+            });
+        }
+
+        function downloadJson() {
+            const json = generateFinalJson();
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'spend-controls.json';
+            document.body.appendChild(a);
+            a.click();
+
+            setTimeout(() => {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 0);
+        }
+
+        function validateAndExport() {
+            validateState();
+            validateCustomControls();
+
+            if (state.errors.size > 0) {
+                alert(`Please fix the following errors:\n\n${Array.from(state.errors.values()).join('\n')}`);
+                return;
+            }
+
+            if (state.warnings.size > 0) {
+                if (!confirm(`There are warnings you should review:\n\n${Array.from(state.warnings.values()).join('\n')}\n\nDo you want to proceed anyway?`)) {
+                    return;
+                }
+            }
+
+            if (state.spendControls.length === 0) {
+                alert('You must create at least one spend control before exporting.');
+                return;
+            }
+
+            alert('Validation successful! You can now copy or download the JSON.');
+        }
+
+        function render() {
+            const builderForm = document.getElementById('builder-form');
+
+            const formContent = `
+        ${generateCardTypeSelector()}
+        ${generateSpendControlsList()}
+        
+        <div style="margin-top: 1.5rem;">
+            <button class="btn btn-success" onclick="validateAndExport()">Validate & Export</button>
+        </div>
+    `;
+
+            builderForm.innerHTML = formContent;
+
+            const outputSection = document.getElementById('output-section');
+
+            const plainEnglishDescription = generatePlainEnglishDescription();
+            const isValid = validateState();
+            const hasWarnings = state.warnings.size > 0;
+
+            outputSection.innerHTML = `
+        <div class="section-header" style="margin-top: 0;">
+            <h3 style="margin: 0;">
+                JSON Output
+                ${isValid ?
+                    hasWarnings ?
+                        `<span class="validation-badge warning">Warnings ⚠️</span>` :
+                        `<span class="validation-badge success">Valid ✓</span>` :
+                    `<span class="validation-badge error">Invalid ✗</span>`
+                }
+            </h3>
+            <div>
+                <button class="btn" onclick="copyJsonToClipboard()">Copy JSON</button>
+                <button class="btn" onclick="downloadJson()">Download</button>
+            </div>
+        </div>
+        <pre id="json-output" class="json-preview">${generateFinalJson()}</pre>
+        
+        <div class="plain-english-section">
+            <h3 style="margin-top: 0; margin-bottom: 1rem;">Human-Readable Summary</h3>
+            <div class="plain-english-text">${plainEnglishDescription}</div>
+        </div>
+    `;
+        }
+
+        window.changeCardType = changeCardType;
+        window.addSpendControl = addSpendControl;
+        window.deleteSpendControl = deleteSpendControl;
+        window.updateControlBasicInfo = updateControlBasicInfo;
+        window.addCondition = addCondition;
+        window.updateCondition = updateCondition;
+        window.deleteCondition = deleteCondition;
+        window.addCumulativeLimit = addCumulativeLimit;
+        window.updateCumulativeLimit = updateCumulativeLimit;
+        window.deleteCumulativeLimit = deleteCumulativeLimit;
+        window.enableSingleTransactionLimit = enableSingleTransactionLimit;
+        window.updateSingleTransactionLimit = updateSingleTransactionLimit;
+        window.disableSingleTransactionLimit = disableSingleTransactionLimit;
+        window.addCustomControl = addCustomControl;
+        window.updateCustomControl = updateCustomControl;
+        window.updateDaySelection = updateDaySelection;
+        window.updateTransactionTypeSelection = updateTransactionTypeSelection;
+        window.updateTimeRange = updateTimeRange;
+        window.deleteCustomControl = deleteCustomControl;
+        window.copyJsonToClipboard = copyJsonToClipboard;
+        window.downloadJson = downloadJson;
+        window.validateAndExport = validateAndExport;
+
+        render();
+
+    </script>
+</body>
+
+</html>
