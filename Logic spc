@@ -5,8 +5,11 @@ public Map<String, Object> transformSpendControls(List<SpendControl> spendContro
     Map<String, GroupMerchantControl> mccGroupToControl = new HashMap<>();
     
     IndividualMerchantControl individualMerchantControl = new IndividualMerchantControl();
-    CashControl cashControl = null;
     SpendControl cardLevelControl = null;
+    
+    // For cash withdrawal percentage calculation
+    Double creditLimit = null;
+    Double cashWithdrawalLimit = null;
     
     // Single-pass processing
     for (SpendControl control : spendControls) {
@@ -14,6 +17,16 @@ public Map<String, Object> transformSpendControls(List<SpendControl> spendContro
             // This is a card-level control
             cardLevelControl = control;
             mapToIndividualMerchantControl(control, individualMerchantControl);
+            
+            // Extract credit limit from the card-level control's CYCLE limit
+            if (control.getCumulativeLimits() != null) {
+                for (CumulativeLimit limit : control.getCumulativeLimits()) {
+                    if ("CYCLE".equals(limit.getPeriod()) && limit.getAmountLimit() != null) {
+                        creditLimit = limit.getAmountLimit();
+                        break;
+                    }
+                }
+            }
             
             // Process MCC_GROUPs from card-level custom controls
             if (control.getCustomControls() != null) {
@@ -41,8 +54,15 @@ public Map<String, Object> transformSpendControls(List<SpendControl> spendContro
             for (Condition condition : control.getConditions()) {
                 if ("TRANSACTION_TYPE".equals(condition.getConditionType()) 
                         && "CASH_DISBURSMENT".equals(condition.getConditionValue())) {
-                    // Handle cash disbursement
-                    cashControl = mapToCashControl(control);
+                    // Extract cash withdrawal limit from the CYCLE period in this control
+                    if (control.getCumulativeLimits() != null) {
+                        for (CumulativeLimit limit : control.getCumulativeLimits()) {
+                            if ("CYCLE".equals(limit.getPeriod()) && limit.getAmountLimit() != null) {
+                                cashWithdrawalLimit = limit.getAmountLimit();
+                                break;
+                            }
+                        }
+                    }
                 } else if ("MCC_GROUP".equals(condition.getConditionType())) {
                     // Handle MCC_GROUP conditional control
                     String[] mccGroups = condition.getConditionValue().split(",");
@@ -65,13 +85,20 @@ public Map<String, Object> transformSpendControls(List<SpendControl> spendContro
         }
     }
     
+    // Calculate cash withdrawal percentage if both values are available
+    Double cashWithdrawalPercentage = null;
+    if (creditLimit != null && cashWithdrawalLimit != null && creditLimit > 0) {
+        cashWithdrawalPercentage = (cashWithdrawalLimit / creditLimit) * 100;
+    }
+    
     // Convert our map of unique controls to a list
     List<GroupMerchantControl> groupMerchantControls = new ArrayList<>(mccGroupToControl.values());
     
-    // Set the results in the result map
+    // Set the results in the result map - no cashControl object, just the percentage
     result.put("individualMerchantControl", individualMerchantControl);
     result.put("groupMerchantControls", groupMerchantControls);
-    result.put("cashControl", cashControl);
+    result.put("creditLimit", creditLimit);
+    result.put("cashWithdrawalPercentage", cashWithdrawalPercentage);
     
     return result;
 }
