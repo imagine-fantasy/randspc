@@ -1,0 +1,77 @@
+public Map<String, Object> transformSpendControls(List<SpendControl> spendControls) {
+    Map<String, Object> result = new HashMap<>();
+    
+    // Track unique MCC_GROUP values to their GroupMerchantControl objects
+    Map<String, GroupMerchantControl> mccGroupToControl = new HashMap<>();
+    
+    IndividualMerchantControl individualMerchantControl = new IndividualMerchantControl();
+    CashControl cashControl = null;
+    SpendControl cardLevelControl = null;
+    
+    // Single-pass processing
+    for (SpendControl control : spendControls) {
+        if (control.getConditions() == null || control.getConditions().isEmpty()) {
+            // This is a card-level control
+            cardLevelControl = control;
+            mapToIndividualMerchantControl(control, individualMerchantControl);
+            
+            // Process MCC_GROUPs from card-level custom controls
+            if (control.getCustomControls() != null) {
+                for (CustomControl customControl : control.getCustomControls()) {
+                    if ("MCC_GROUP".equals(customControl.getControlType()) && 
+                        "ALLOW".equals(customControl.getControlValueOperator())) {
+                        
+                        // Process each allowed MCC_GROUP from card level
+                        String[] mccGroups = customControl.getControlValue().split(",");
+                        for (String mccGroup : mccGroups) {
+                            String trimmedGroup = mccGroup.trim();
+                            
+                            // Create a GroupMerchantControl with card-level limits if not already exists
+                            if (!mccGroupToControl.containsKey(trimmedGroup)) {
+                                GroupMerchantControl gmc = createGroupMerchantControlWithLimits(
+                                        trimmedGroup, control);
+                                mccGroupToControl.put(trimmedGroup, gmc);
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            // This is a conditional control
+            for (Condition condition : control.getConditions()) {
+                if ("TRANSACTION_TYPE".equals(condition.getConditionType()) 
+                        && "CASH_DISBURSMENT".equals(condition.getConditionValue())) {
+                    // Handle cash disbursement
+                    cashControl = mapToCashControl(control);
+                } else if ("MCC_GROUP".equals(condition.getConditionType())) {
+                    // Handle MCC_GROUP conditional control
+                    String[] mccGroups = condition.getConditionValue().split(",");
+                    for (String mccGroup : mccGroups) {
+                        String trimmedGroup = mccGroup.trim();
+                        
+                        if (mccGroupToControl.containsKey(trimmedGroup)) {
+                            // Update existing GroupMerchantControl with conditional limits
+                            GroupMerchantControl existingGmc = mccGroupToControl.get(trimmedGroup);
+                            updateGroupMerchantControlWithLimits(existingGmc, control);
+                        } else {
+                            // Create new GroupMerchantControl with conditional limits
+                            GroupMerchantControl gmc = createGroupMerchantControlWithLimits(
+                                    trimmedGroup, control);
+                            mccGroupToControl.put(trimmedGroup, gmc);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Convert our map of unique controls to a list
+    List<GroupMerchantControl> groupMerchantControls = new ArrayList<>(mccGroupToControl.values());
+    
+    // Set the results in the result map
+    result.put("individualMerchantControl", individualMerchantControl);
+    result.put("groupMerchantControls", groupMerchantControls);
+    result.put("cashControl", cashControl);
+    
+    return result;
+}
