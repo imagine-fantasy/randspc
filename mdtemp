@@ -1,0 +1,58 @@
+%% Approach 1: Juno Orchestration
+sequenceDiagram
+    actor User
+    participant Juno as Juno Platform
+    participant Batch as Juno Batch Process
+    participant CardDomain as Card Domain
+    participant TSYS as TSYS Core
+    
+    User->>Juno: Create temporary control<br>(Daily limit: $500)<br>Start: 2025-06-01<br>End: 2025-06-15
+    Juno->>Juno: Store configuration & dates
+    
+    Note over Juno,CardDomain: On 2025-06-01
+    Batch->>Juno: Check for activations
+    Juno->>CardDomain: PUT /spendControls<br>(with temporary values)
+    CardDomain->>TSYS: Apply temporary control<br>(Daily limit: $500)
+    
+    Note over Juno,CardDomain: On 2025-06-15
+    Batch->>Juno: Check for deactivations
+    Juno->>CardDomain: PUT /spendControls<br>(with original values)
+    CardDomain->>TSYS: Restore original control<br>(Daily limit: $100)
+
+
+
+
+
+
+
+
+%% Approach 2: Card Domain Orchestration
+sequenceDiagram
+    actor User
+    participant Juno as Juno Platform
+    participant CardDomain as Card Domain
+    participant Batch as Card Domain Batch
+    participant TSYS as TSYS Core
+    
+    User->>Juno: Create temporary control<br>(Daily limit: $500)<br>Start: 2025-06-01<br>End: 2025-06-15
+    Juno->>CardDomain: POST /temporarySpendControls
+    CardDomain->>CardDomain: Store configuration & dates
+    CardDomain-->>Juno: Confirmation
+    
+    Note over CardDomain,TSYS: On 2025-06-01
+    Batch->>CardDomain: Check for activations
+    CardDomain->>TSYS: Apply temporary control<br>(Daily limit: $500)
+    
+    Note over User,TSYS: During active period
+    User->>Juno: Attempt permanent control update
+    alt Block Updates (Option 1)
+        Juno->>CardDomain: PUT /spendControls
+        CardDomain-->>Juno: Rejected (temp control active)
+    else Client Responsibility (Option 2)
+        Juno->>CardDomain: PUT /spendControls<br>(includes temp values)
+        CardDomain->>TSYS: Apply updates (preserving temp values)
+    end
+    
+    Note over CardDomain,TSYS: On 2025-06-15
+    Batch->>CardDomain: Check for deactivations
+    CardDomain->>TSYS: Restore original control<br>(Daily limit: $100)
